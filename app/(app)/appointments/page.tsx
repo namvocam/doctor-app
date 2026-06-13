@@ -46,11 +46,7 @@ import ActionMenu from '@/components/ActionMenu'
 import type { Appointment } from '@/lib/appointmentTypes'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 import { useCurrentUser } from '@/lib/userContext'
-import {
-  canCreateAppointment,
-  canEditAppointment,
-  canChangeAppointmentStatus,
-} from '@/lib/permissions'
+import { canCreateAppointment, editableAppointmentFields } from '@/lib/permissions'
 import type { ActionItem } from '@/components/ActionMenu'
 
 const PAGE_SIZE = 14
@@ -241,6 +237,7 @@ function AppointmentsClient() {
   const [deleting, setDeleting] = useState<Appointment | null>(null)
   const [creating, setCreating] = useState(false)
   const [statusEditing, setStatusEditing] = useState<Appointment | null>(null)
+  const [statusFields, setStatusFields] = useState<string[]>(['result'])
   const me = useCurrentUser()
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
@@ -728,12 +725,20 @@ function AppointmentsClient() {
                   const bg = rowBg(r)
                   const stickyBg = bg || 'bg-white'
                   const isOwner = !!r.createdBy && r.createdBy === me.userId
+                  const editable = editableAppointmentFields(me.role, isOwner)
                   const actions: ActionItem[] = [{ label: 'Xem', icon: Eye, onClick: () => setViewing(r) }]
-                  if (canEditAppointment(me.role, isOwner)) {
+                  if (editable === 'all') {
                     actions.push({ label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) })
                     actions.push({ label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) })
-                  } else if (canChangeAppointmentStatus(me.role, isOwner)) {
-                    actions.push({ label: 'Đổi trạng thái', icon: Pencil, onClick: () => setStatusEditing(r) })
+                  } else if (editable.length > 0) {
+                    actions.push({
+                      label: 'Cập nhật',
+                      icon: Pencil,
+                      onClick: () => {
+                        setStatusFields(editable)
+                        setStatusEditing(r)
+                      },
+                    })
                   }
                   return (
                     <tr
@@ -746,9 +751,9 @@ function AppointmentsClient() {
                       <Td className={`sticky left-[80px] z-10 w-[56px] min-w-[56px] ${stickyBg}`}>
                         {(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}
                       </Td>
-                      <Td className={`sticky left-[136px] z-10 w-[190px] min-w-[190px] border-r border-gray-200 font-medium ${stickyBg}`}>
-                        {r.customerName}
-                        {r.age ? ` / ${r.age} tuổi` : ''}
+                      <Td className={`sticky left-[136px] z-10 w-[190px] min-w-[190px] border-r border-gray-200 ${stickyBg}`}>
+                        <div className="font-medium leading-tight">{r.customerName}</div>
+                        {r.age ? <div className="text-xs text-gray-500">{r.age} tuổi</div> : null}
                       </Td>
                       {visibleColumns.map((c) => (
                         <Td key={c.key} className={c.tdClass}>
@@ -786,6 +791,7 @@ function AppointmentsClient() {
         editing={editing}
         deleting={deleting}
         statusEditing={statusEditing}
+        statusFields={statusFields}
         creating={creating}
         cats={cats}
         onClose={() => {

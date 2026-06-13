@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import AppointmentModel from '@/models/Appointment'
 import { getCurrentUser } from '@/lib/session'
-import { canEditAppointment, canChangeAppointmentStatus } from '@/lib/permissions'
+import { canEditAppointment, editableAppointmentFields } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,16 +49,14 @@ export async function PUT(
     if (!current) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
 
     const isOwner = String((current as { createdBy?: unknown }).createdBy ?? '') === me.userId
-    const canFull = canEditAppointment(me.role, isOwner)
-    const canStatus = canChangeAppointmentStatus(me.role, isOwner)
-    if (!canFull && !canStatus) {
+    const editable = editableAppointmentFields(me.role, isOwner)
+    if (editable !== 'all' && editable.length === 0) {
       return NextResponse.json({ error: 'Bạn không có quyền sửa lịch hẹn này' }, { status: 403 })
     }
 
     const body = await request.json()
     const update: Record<string, unknown> = {}
-    // Không đủ quyền sửa đầy đủ -> chỉ cho đổi trạng thái (kết quả)
-    const fields = canFull ? ALLOWED_FIELDS : (['result'] as const)
+    const fields = editable === 'all' ? ALLOWED_FIELDS : editable
     for (const key of fields) {
       if (!(key in body)) continue
       const value = body[key]

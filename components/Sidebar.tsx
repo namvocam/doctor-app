@@ -14,6 +14,9 @@ import {
   Stethoscope,
   Settings2,
   Users,
+  List,
+  Video,
+  Megaphone,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { visibleLeadReports } from '@/lib/permissions'
@@ -153,10 +156,10 @@ export default function Sidebar({
           baseHref="/reports/lead-phau"
           onNavigate={onNavigate}
           items={[
-            { key: 'all', label: 'Tất cả', href: '/reports/lead-phau' },
-            { key: 'ctv', label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv' },
-            { key: 'tiktok', label: 'Lead Tiktok', href: '/reports/lead-phau/tiktok' },
-            { key: 'ads', label: 'Lead ADS', href: '/reports/lead-phau/ads' },
+            { key: 'all', label: 'Tất cả', href: '/reports/lead-phau', icon: List },
+            { key: 'ctv', label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv', icon: Users },
+            { key: 'tiktok', label: 'Lead Tiktok', href: '/reports/lead-phau/tiktok', icon: Video },
+            { key: 'ads', label: 'Lead ADS', href: '/reports/lead-phau/ads', icon: Megaphone },
           ].filter((it) => (visibleLeadReports(role) as string[]).includes(it.key))}
         />
 

@@ -50,6 +50,20 @@ export function canChangeAppointmentStatus(role?: string, isOwner = false) {
   )
 }
 
+/**
+ * Các trường lịch hẹn mà role được sửa:
+ * - 'all': sửa toàn bộ (admin, tele-sale của mình)
+ * - sale: kết quả + ghi chú của sale + doanh thu
+ * - y tá: chỉ kết quả (đổi trạng thái)
+ * - còn lại: [] (không sửa)
+ */
+export function editableAppointmentFields(role?: string, isOwner = false): 'all' | string[] {
+  if (canEditAppointment(role, isOwner)) return 'all'
+  if (role === 'sale') return ['result', 'saleNote', 'revenue']
+  if (role === 'nurse') return ['result']
+  return []
+}
+
 /* ---------------- Quyền với Tái khám ---------------- */
 export function canCreateReExam(role?: string) {
   return role === 'admin' || role === 'nurse'

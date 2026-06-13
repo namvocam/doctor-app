@@ -1,5 +1,5 @@
-import LeadReport from '@/components/LeadReport'
+import ComingSoon from '@/components/ComingSoon'
 
 export default function LeadCtvPage() {
-  return <LeadReport role="manager-collaborator" title="Lead quản lý CTV" />
+  return <ComingSoon title="Lead quản lý CTV" />
 }

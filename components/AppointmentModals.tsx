@@ -11,6 +11,7 @@ interface Props {
   editing: Appointment | null
   deleting: Appointment | null
   statusEditing?: Appointment | null
+  statusFields?: string[]
   creating?: boolean
   cats: CategoryMap
   onClose: () => void
@@ -22,6 +23,7 @@ export default function AppointmentModals({
   editing,
   deleting,
   statusEditing = null,
+  statusFields = ['result'],
   creating = false,
   cats,
   onClose,
@@ -33,43 +35,54 @@ export default function AppointmentModals({
       <EditModal appointment={editing} cats={cats} onClose={onClose} onSaved={onChanged} />
       <DeleteModal appointment={deleting} onClose={onClose} onDeleted={onChanged} />
       <CreateModal open={creating} cats={cats} onClose={onClose} onCreated={onChanged} />
-      <StatusModal appointment={statusEditing} cats={cats} onClose={onClose} onSaved={onChanged} />
+      <LimitedEditModal appointment={statusEditing} fields={statusFields} cats={cats} onClose={onClose} onSaved={onChanged} />
     </>
   )
 }
 
-/* ---------------- Đổi trạng thái (chỉ Kết quả) ---------------- */
-function StatusModal({
+/* ---------------- Cập nhật giới hạn (đổi trạng thái / sale) ---------------- */
+function LimitedEditModal({
   appointment,
+  fields,
   cats,
   onClose,
   onSaved,
 }: {
   appointment: Appointment | null
+  fields: string[]
   cats: CategoryMap
   onClose: () => void
   onSaved: () => void
 }) {
-  const [value, setValue] = useState('')
+  const [form, setForm] = useState<Record<string, unknown>>({})
   const [initId, setInitId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   if (appointment && appointment._id !== initId) {
     setInitId(appointment._id)
-    setValue(appointment.result ?? '')
+    setForm({
+      result: appointment.result ?? '',
+      saleNote: appointment.saleNote ?? '',
+      revenue: appointment.revenue ?? 0,
+    })
     setError('')
   }
+
+  const v = (k: string) => (form[k] as string) ?? ''
+  const set = (k: string, val: unknown) => setForm((p) => ({ ...p, [k]: val }))
 
   async function save() {
     if (!appointment) return
     setSaving(true)
     setError('')
     try {
+      const payload: Record<string, unknown> = {}
+      for (const f of fields) payload[f] = form[f]
       const res = await fetch(`/api/appointments/${appointment._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: value }),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const j = await res.json()
@@ -88,7 +101,7 @@ function StatusModal({
   return (
     <Modal
       open={!!appointment}
-      title="Đổi trạng thái"
+      title="Cập nhật lịch hẹn"
       onClose={onClose}
       size="sm"
       footer={
@@ -101,17 +114,35 @@ function StatusModal({
         </>
       }
     >
-      <p className="mb-2 text-sm text-gray-600">
+      <p className="mb-3 text-sm text-gray-600">
         Khách hàng: <span className="font-semibold text-gray-900">{appointment?.customerName}</span>
       </p>
-      <label className="mb-1.5 block text-sm font-medium text-gray-700">Kết quả</label>
-      <select className="input" value={value} onChange={(e) => setValue(e.target.value)}>
-        <option value="">-- Chọn --</option>
-        {(cats.result?.options ?? []).map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-        {value && !(cats.result?.options ?? []).includes(value) && <option value={value}>{value}</option>}
-      </select>
+      <div className="space-y-3">
+        {fields.includes('result') && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Kết quả</label>
+            <select className="input" value={v('result')} onChange={(e) => set('result', e.target.value)}>
+              <option value="">-- Chọn --</option>
+              {(cats.result?.options ?? []).map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+              {v('result') && !(cats.result?.options ?? []).includes(v('result')) && <option value={v('result')}>{v('result')}</option>}
+            </select>
+          </div>
+        )}
+        {fields.includes('revenue') && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Doanh thu (đ)</label>
+            <input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} />
+          </div>
+        )}
+        {fields.includes('saleNote') && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Ghi chú của sale</label>
+            <textarea className="input min-h-20" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} />
+          </div>
+        )}
+      </div>
     </Modal>
   )
 }

@@ -1,5 +1,5 @@
-import LeadReport from '@/components/LeadReport'
+import ComingSoon from '@/components/ComingSoon'
 
 export default function LeadTiktokPage() {
-  return <LeadReport role="tiktok" title="Lead Tiktok" />
+  return <ComingSoon title="Lead Tiktok" />
 }

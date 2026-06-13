@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import {
   CalendarCheck2,
@@ -9,6 +10,8 @@ import {
   RotateCcw,
   Plus,
   FileDown,
+  Maximize2,
+  Minimize2,
   CalendarDays,
   Clock,
   TriangleAlert,
@@ -101,6 +104,8 @@ function ReExamClient() {
   const [mediaRec, setMediaRec] = useState<ReExamRecord | null>(null)
   const [deleting, setDeleting] = useState<ReExamRecord | null>(null)
   const me = useCurrentUser()
+  const [fullscreen, setFullscreen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [rows, setRows] = useState<ReExam[]>([])
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
@@ -148,6 +153,19 @@ function ReExamClient() {
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+  useEffect(() => {
+    if (!fullscreen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [fullscreen])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -298,15 +316,33 @@ function ReExamClient() {
         ))}
       </div>
 
+      {(() => {
+        const resultsNode = (
+        <div
+          className={
+            fullscreen
+              ? 'fixed inset-0 z-[70] flex flex-col gap-3 overflow-auto bg-gray-100 p-4'
+              : 'space-y-4'
+          }
+        >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
           <span className="font-bold text-gray-900">{formatNumber(total)}</span> kết quả
         </p>
         <div className="flex items-center gap-2">
-          <button onClick={handleExport} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
-            <FileDown className="h-4 w-4" /> Xuất CSV
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {fullscreen ? 'Thoát' : 'Fullscreen'}
           </button>
+          {!fullscreen && (
+            <button onClick={handleExport} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
+              <FileDown className="h-4 w-4" /> Xuất CSV
+            </button>
+          )}
           <label className="flex items-center gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={maskPhones} onChange={(e) => setMaskPhones(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" />
             Che SĐT
@@ -408,6 +444,10 @@ function ReExamClient() {
           onPageChange={handlePageChange}
         />
       )}
+        </div>
+        )
+        return fullscreen && mounted ? createPortal(resultsNode, document.body) : resultsNode
+      })()}
 
       <CreateReExamModal
         open={showCreate}
