@@ -111,7 +111,8 @@ const COLUMNS: ColumnDef[] = [
   {
     key: 'telesaleNote',
     label: 'Ghi chú của Telesale',
-    tdClass: 'min-w-[200px] max-w-xs',
+    thClass: 'text-left',
+    tdClass: 'min-w-[200px] max-w-xs text-left align-top!',
     render: (r, ctx) => <NoteCell text={r.telesaleNote} ctx={ctx} />,
   },
   { key: 'source', label: 'Nguồn', render: (r) => r.source ?? '-' },
@@ -137,14 +138,16 @@ const COLUMNS: ColumnDef[] = [
   {
     key: 'saleNote',
     label: 'Ghi chú của sale',
-    tdClass: 'min-w-[180px] max-w-xs',
+    thClass: 'text-left',
+    tdClass: 'min-w-[180px] max-w-xs text-left align-top!',
     render: (r, ctx) => <NoteCell text={r.saleNote} ctx={ctx} />,
   },
   { key: 'media', label: 'Media', render: (r) => r.media || '-' },
   {
     key: 'mktNote',
     label: 'Ghi chú của MKT',
-    tdClass: 'min-w-[180px] max-w-xs',
+    thClass: 'text-left',
+    tdClass: 'min-w-[180px] max-w-xs text-left align-top!',
     render: (r, ctx) => <NoteCell text={r.mktNote} ctx={ctx} />,
   },
   { key: 'dataReceivedAt', label: 'Ngày nhận data', tdClass: 'whitespace-nowrap', render: (r) => formatDateVN(r.dataReceivedAt) },
@@ -690,7 +693,7 @@ function AppointmentsClient() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
+                <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
                   <Th className="sticky left-0 z-20 w-[80px] min-w-[80px] bg-brand-navy">Thao tác</Th>
                   <Th className="sticky left-[80px] z-20 w-[56px] min-w-[56px] bg-brand-navy">STT</Th>
                   <Th className="sticky left-[136px] z-20 w-[190px] min-w-[190px] border-r border-white/20 bg-brand-navy">
@@ -716,7 +719,7 @@ function AppointmentsClient() {
                   return (
                     <tr
                       key={r._id}
-                      className={`border-b border-gray-100 ${bg || 'hover:bg-gray-50'}`}
+                      className={`border-b border-gray-100 text-center ${bg || 'hover:bg-gray-50'}`}
                     >
                       <Td className={`sticky left-0 z-10 w-[80px] min-w-[80px] ${stickyBg}`}>
                         <ActionMenu
@@ -856,7 +859,7 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
   return <th className={`whitespace-nowrap px-3 py-3 ${className}`}>{children}</th>
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-3 align-top ${className}`}>{children}</td>
+  return <td className={`px-3 py-3 align-middle ${className}`}>{children}</td>
 }
 
 export default function AppointmentsPage() {

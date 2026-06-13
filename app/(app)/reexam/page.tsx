@@ -319,14 +319,14 @@ function ReExamClient() {
         ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
+            <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
               <th className="sticky left-0 z-20 w-[64px] min-w-[64px] whitespace-nowrap bg-brand-navy px-3 py-3">Thao tác</th>
               <th className="sticky left-[64px] z-20 w-[56px] min-w-[56px] whitespace-nowrap bg-brand-navy px-3 py-3">STT</th>
               <th className="sticky left-[120px] z-20 w-[170px] min-w-[170px] whitespace-nowrap border-r border-white/20 bg-brand-navy px-3 py-3">Khách hàng</th>
               <Th>Số điện thoại</Th>
-              <Th>Ngày tái khám</Th><Th>Giờ</Th><Th>Trạng thái</Th><Th>Dịch vụ</Th>
+              <Th>Ngày tái khám</Th><Th>Giờ</Th><Th>Trạng thái</Th><Th className="text-left">Dịch vụ</Th>
               <Th>Ngày PT</Th><Th>Media</Th><Th>Bác sĩ</Th><Th>Sale 1</Th>
-              <Th>Tình trạng trước khám</Th><Th>Chỉ định của bác sĩ</Th><Th>Ghi chú</Th><Th>Ngày tạo</Th>
+              <Th className="text-left">Tình trạng trước khám</Th><Th className="text-left">Chỉ định của bác sĩ</Th><Th className="text-left">Ghi chú</Th><Th>Ngày tạo</Th>
             </tr>
           </thead>
           <tbody>
@@ -338,7 +338,7 @@ function ReExamClient() {
                 const exp = !!expandedRows[r._id]
                 return (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
-                  <td className={`sticky left-0 z-10 w-[64px] min-w-[64px] px-3 py-3 align-middle ${sbg}`}>
+                  <td className={`sticky left-0 z-10 w-[64px] min-w-[64px] px-3 py-3 text-center align-middle ${sbg}`}>
                     <ActionMenu
                       items={[
                         { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
@@ -347,10 +347,10 @@ function ReExamClient() {
                       ]}
                     />
                   </td>
-                  <td className={`sticky left-[64px] z-10 w-[56px] min-w-[56px] px-3 py-3 align-middle ${sbg}`}>
+                  <td className={`sticky left-[64px] z-10 w-[56px] min-w-[56px] px-3 py-3 text-center align-middle ${sbg}`}>
                     {(page - 1) * PAGE_SIZE + i + 1}
                   </td>
-                  <td className={`sticky left-[120px] z-10 w-[170px] min-w-[170px] border-r border-gray-200 px-3 py-3 align-middle font-medium ${sbg}`}>
+                  <td className={`sticky left-[120px] z-10 w-[170px] min-w-[170px] border-r border-gray-200 px-3 py-3 text-center align-middle font-medium ${sbg}`}>
                     {r.customerName}
                   </td>
                   <Td>{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
@@ -465,11 +465,11 @@ function StatCard({ icon, label, value, color, bg }: { icon: React.ReactNode; la
     </div>
   )
 }
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-3 py-3">{children}</th>
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <th className={`whitespace-nowrap px-3 py-3 ${className}`}>{children}</th>
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`whitespace-nowrap px-3 py-3 align-middle ${className}`}>{children}</td>
+  return <td className={`whitespace-nowrap px-3 py-3 text-center align-middle ${className}`}>{children}</td>
 }
 
 export default function ReExamPage() {
