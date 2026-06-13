@@ -91,9 +91,6 @@ function daysFromNow(n) {
 function pick(arr, i) {
   return arr[i % arr.length]
 }
-function maskPhone(p) {
-  return p
-}
 
 const CUSTOMERS = [
   ['Trần Thị Thu', 27, '0901111332'],
@@ -113,11 +110,14 @@ const CUSTOMERS = [
   ['Quyên Nguyễn', 32, '0966778899'],
 ]
 
-function buildAppointments() {
-  return CUSTOMERS.map((c, i) => ({
-    customerName: c[0],
+function buildAppointments(count = 280) {
+  return Array.from({ length: count }, (_, i) => {
+    const c = CUSTOMERS[i % CUSTOMERS.length]
+    const round = Math.floor(i / CUSTOMERS.length)
+    return {
+    customerName: round === 0 ? c[0] : `${c[0]} (${round + 1})`,
     age: c[1],
-    phone: maskPhone(c[2]),
+    phone: '0' + (900000000 + i * 137).toString().slice(0, 9),
     performAt: daysFromNow(i % 4 === 0 ? 0 : i - 7),
     doctor: DOCTOR,
     surgery: i % 3 !== 0,
@@ -153,16 +153,20 @@ function buildAppointments() {
     mktNote: pick(['Chạy ads FB', 'Lead TikTok', 'Remarketing', ''], i),
     dataReceivedAt: daysFromNow(-(i + 10)),
     recording: i % 2 === 0 ? `https://example.com/rec/${i + 1}.mp3` : '',
-    revenue: i % 3 === 0 ? (10 + i) * 1_000_000 : 0,
-    highlight: i % 4 === 0,
-  }))
+    revenue: i % 3 === 0 ? (10 + (i % 30)) * 1_000_000 : 0,
+    highlight: i % 7 === 0,
+    }
+  })
 }
 
-function buildReExams() {
+function buildReExams(count = 84) {
   const statuses = ['Phàn nàn', 'Đã lên lịch', 'Quá hạn', 'Đã tái khám', 'Đã lên lịch', 'Quá hạn', 'Phàn nàn']
-  return CUSTOMERS.slice(0, 12).map((c, i) => ({
-    customerName: c[0],
-    phone: maskPhone(c[2]),
+  return Array.from({ length: count }, (_, i) => {
+    const c = CUSTOMERS[i % CUSTOMERS.length]
+    const round = Math.floor(i / CUSTOMERS.length)
+    return {
+    customerName: round === 0 ? c[0] : `${c[0]} (${round + 1})`,
+    phone: '0' + (900000000 + i * 211).toString().slice(0, 9),
     reExamDate: daysFromNow(i % 3 === 0 ? 0 : i - 5),
     time: pick(['08:00', '08:30', '09:00', '10:00', '14:00', '15:30'], i),
     status: pick(statuses, i),
@@ -171,7 +175,8 @@ function buildReExams() {
     media: pick(['KSDHA', 'Media HN', 'Media SG'], i),
     doctor: DOCTOR,
     sale1: pick(SALES, i),
-  }))
+    }
+  })
 }
 
 async function main() {

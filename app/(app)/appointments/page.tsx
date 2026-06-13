@@ -20,6 +20,9 @@ import {
   maskPhone,
 } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 14
 
 interface Appointment {
   _id: string
@@ -68,10 +71,11 @@ function AppointmentsClient() {
   const [maskPhones, setMaskPhones] = useState(false)
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
 
   const buildQuery = useCallback(
-    (f: typeof filters) => {
+    (f: typeof filters, pageArg: number) => {
       const p = new URLSearchParams()
       if (view) p.set('view', view)
       if (f.q) p.set('q', f.q)
@@ -79,17 +83,18 @@ function AppointmentsClient() {
       if (f.service) p.set('service', f.service)
       if (f.from) p.set('from', f.from)
       if (f.to) p.set('to', f.to)
-      p.set('limit', '50')
+      p.set('page', String(pageArg))
+      p.set('limit', String(PAGE_SIZE))
       return p.toString()
     },
     [view]
   )
 
   const fetchData = useCallback(
-    async (f: typeof filters) => {
+    async (f: typeof filters, pageArg: number) => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/appointments?${buildQuery(f)}`)
+        const res = await fetch(`/api/appointments?${buildQuery(f, pageArg)}`)
         const json = await res.json()
         setRows(json.data ?? [])
         setTotal(json.total ?? 0)
@@ -102,19 +107,27 @@ function AppointmentsClient() {
 
   // Tải lại khi đổi view (từ sidebar)
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(filters)
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setPage(1)
+    fetchData(filters, 1)
+    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    fetchData(filters)
+    setPage(1)
+    fetchData(filters, 1)
   }
   function handleReset() {
     const cleared = { q: '', province: 'all', service: '', from: '', to: '' }
     setFilters(cleared)
-    fetchData(cleared)
+    setPage(1)
+    fetchData(cleared, 1)
+  }
+  function handlePageChange(p: number) {
+    setPage(p)
+    fetchData(filters, p)
   }
 
   function handleExport() {
@@ -380,6 +393,17 @@ function AppointmentsClient() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          unit="lịch hẹn"
+          onPageChange={handlePageChange}
+        />
+      )}
     </div>
   )
 }

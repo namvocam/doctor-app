@@ -17,6 +17,9 @@ import {
 } from 'lucide-react'
 import { formatDateVN, formatNumber, maskPhone } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
+import Pagination from '@/components/Pagination'
+
+const PAGE_SIZE = 14
 
 interface ReExam {
   _id: string
@@ -71,10 +74,12 @@ function ReExamClient() {
   const [maskPhones, setMaskPhones] = useState(false)
   const [rows, setRows] = useState<ReExam[]>([])
   const [stats, setStats] = useState({ total: 0, overdue: 0, complaints: 0 })
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
 
   const buildQuery = useCallback(
-    (f: typeof filters) => {
+    (f: typeof filters, pageArg: number) => {
       const p = new URLSearchParams()
       if (view) p.set('view', view)
       if (f.doctor) p.set('doctor', f.doctor)
@@ -84,20 +89,22 @@ function ReExamClient() {
       if (f.service) p.set('service', f.service)
       if (f.from) p.set('from', f.from)
       if (f.to) p.set('to', f.to)
-      p.set('limit', '50')
+      p.set('page', String(pageArg))
+      p.set('limit', String(PAGE_SIZE))
       return p.toString()
     },
     [view]
   )
 
   const fetchData = useCallback(
-    async (f: typeof filters) => {
+    async (f: typeof filters, pageArg: number) => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/reexams?${buildQuery(f)}`)
+        const res = await fetch(`/api/reexams?${buildQuery(f, pageArg)}`)
         const json = await res.json()
         setRows(json.data ?? [])
         setStats(json.stats ?? { total: 0, overdue: 0, complaints: 0 })
+        setTotal(json.total ?? 0)
       } finally {
         setLoading(false)
       }
@@ -106,19 +113,27 @@ function ReExamClient() {
   )
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(filters)
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setPage(1)
+    fetchData(filters, 1)
+    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    fetchData(filters)
+    setPage(1)
+    fetchData(filters, 1)
   }
   function handleReset() {
     const cleared = { doctor: '', status: '', name: '', phone: '', service: '', from: '', to: '' }
     setFilters(cleared)
-    fetchData(cleared)
+    setPage(1)
+    fetchData(cleared, 1)
+  }
+  function handlePageChange(p: number) {
+    setPage(p)
+    fetchData(filters, p)
   }
 
   function applyQuickRange(label: string) {
@@ -136,7 +151,8 @@ function ReExamClient() {
     }
     const next = { ...filters, from: toISO(from), to: toISO(to) }
     setFilters(next)
-    fetchData(next)
+    setPage(1)
+    fetchData(next, 1)
   }
 
   function handleExport() {
@@ -290,6 +306,17 @@ function ReExamClient() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {!loading && total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          unit="lịch tái khám"
+          onPageChange={handlePageChange}
+        />
+      )}
     </div>
   )
 }
