@@ -198,7 +198,7 @@ function CreateModal({
   // Reset form mỗi khi mở
   if (open && !wasOpen) {
     setWasOpen(true)
-    setForm({ surgery: false, test: false, highlight: false, revenue: 0 })
+    setForm({ surgery: false, test: false, revenue: 0, doctor: DEFAULT_DOCTOR })
     setError('')
   }
   if (!open && wasOpen) setWasOpen(false)
@@ -252,59 +252,96 @@ function CreateModal({
         </>
       }
     >
-      <AppointmentFields form={form} set={set} cats={cats} />
+      <AppointmentFields form={form} set={set} cats={cats} lockDoctor />
     </Modal>
   )
 }
 
-/* ---------------- Shared form fields ---------------- */
+export const DEFAULT_DOCTOR = 'Bs. Đình Khanh'
+
+function Section({ title }: { title: string }) {
+  return (
+    <div className="-mx-5 mb-4 mt-6 bg-gray-100 px-5 py-2.5 first:mt-0">
+      <h3 className="text-sm font-bold text-gray-700">{title}</h3>
+    </div>
+  )
+}
+
+/* ---------------- Shared form fields (chia section) ---------------- */
 function AppointmentFields({
   form,
   set,
   cats,
+  lockDoctor = false,
 }: {
   form: Record<string, unknown>
   set: (key: string, value: unknown) => void
   cats: CategoryMap
+  lockDoctor?: boolean
 }) {
   const v = (k: string) => (form[k] as string) ?? ''
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <F label="Tên KH"><input className="input" value={v('customerName')} onChange={(e) => set('customerName', e.target.value)} /></F>
-      <F label="Tuổi"><input type="number" className="input" value={v('age')} onChange={(e) => set('age', e.target.value ? Number(e.target.value) : undefined)} /></F>
-      <F label="Số ĐT/Hộ chiếu"><input className="input" value={v('phone')} onChange={(e) => set('phone', e.target.value)} /></F>
-      <F label="Ngày giờ thực hiện"><input type="datetime-local" className="input" value={v('performAt')} onChange={(e) => set('performAt', e.target.value)} /></F>
-      <F label="Bác sĩ"><input className="input" value={v('doctor')} onChange={(e) => set('doctor', e.target.value)} /></F>
-      <Sel label="Tỉnh" options={cats.province?.options} value={v('province')} onChange={(x) => set('province', x)} />
-      <Sel label="Dịch vụ 1" options={cats.service?.options} value={v('service1')} onChange={(x) => set('service1', x)} />
-      <Sel label="Dịch vụ 2" options={cats.service?.options} value={v('service2')} onChange={(x) => set('service2', x)} />
-      <Sel label="Nguồn" options={cats.source?.options} value={v('source')} onChange={(x) => set('source', x)} />
-      <Sel label="Báo giá" options={cats.quote?.options} value={v('quote')} onChange={(x) => set('quote', x)} />
-      <Sel label="Kết quả" options={cats.result?.options} value={v('result')} onChange={(x) => set('result', x)} />
-      <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
-      <F label="Nguồn phụ"><input className="input" value={v('subSource')} onChange={(e) => set('subSource', e.target.value)} /></F>
-      <F label="Nguồn gr tiếp cận sau"><input className="input" value={v('groupSource')} onChange={(e) => set('groupSource', e.target.value)} /></F>
-      <F label="Telesale"><input className="input" value={v('telesale')} onChange={(e) => set('telesale', e.target.value)} /></F>
-      <F label="Telesale CTV"><input className="input" value={v('telesaleCtv')} onChange={(e) => set('telesaleCtv', e.target.value)} /></F>
-      <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
-      <F label="Sale 2"><input className="input" value={v('sale2')} onChange={(e) => set('sale2', e.target.value)} /></F>
-      <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
-      <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
-      <F label="Địa chỉ"><input className="input" value={v('address')} onChange={(e) => set('address', e.target.value)} /></F>
-      <div className="flex items-center gap-6 sm:col-span-2">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={!!form.surgery} onChange={(e) => set('surgery', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Phẫu thuật
-        </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={!!form.test} onChange={(e) => set('test', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Xét nghiệm
-        </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={!!form.highlight} onChange={(e) => set('highlight', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Tô màu nổi bật
-        </label>
+    <div>
+      {/* Thông tin khách hàng */}
+      <Section title="Thông tin khách hàng" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <F label="Tên KH"><input className="input" value={v('customerName')} onChange={(e) => set('customerName', e.target.value)} /></F>
+        <F label="Tuổi"><input type="number" className="input" value={v('age')} onChange={(e) => set('age', e.target.value ? Number(e.target.value) : undefined)} /></F>
+        <F label="Số ĐT/Hộ chiếu"><input className="input" value={v('phone')} onChange={(e) => set('phone', e.target.value)} /></F>
+        <F label="Ngày giờ thực hiện"><input type="datetime-local" className="input" value={v('performAt')} onChange={(e) => set('performAt', e.target.value)} /></F>
+        <F label="Bác sĩ">
+          <input
+            className="input disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+            value={lockDoctor ? DEFAULT_DOCTOR : v('doctor')}
+            disabled={lockDoctor}
+            onChange={(e) => set('doctor', e.target.value)}
+          />
+        </F>
+        <Sel label="Tỉnh" options={cats.province?.options} value={v('province')} onChange={(x) => set('province', x)} />
+        <F label="Địa chỉ" full><input className="input" value={v('address')} onChange={(e) => set('address', e.target.value)} placeholder="VD: Số 64, Nguyễn Huy Tưởng" /></F>
       </div>
-      <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
-      <F label="Ghi chú sale" full><textarea className="input min-h-16" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} /></F>
-      <F label="Ghi chú MKT" full><textarea className="input min-h-16" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} /></F>
+
+      {/* Thông tin nguồn */}
+      <Section title="Thông tin nguồn" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Sel label="Nguồn" options={cats.source?.options} value={v('source')} onChange={(x) => set('source', x)} />
+        <F label="Nguồn phụ"><input className="input" value={v('subSource')} onChange={(e) => set('subSource', e.target.value)} /></F>
+        <F label="Telesale"><input className="input" value={v('telesale')} onChange={(e) => set('telesale', e.target.value)} /></F>
+        <F label="Telesale CTV"><input className="input" value={v('telesaleCtv')} onChange={(e) => set('telesaleCtv', e.target.value)} /></F>
+        <Sel label="Kết quả" options={cats.result?.options} value={v('result')} onChange={(x) => set('result', x)} />
+        <Sel label="Báo giá" options={cats.quote?.options} value={v('quote')} onChange={(x) => set('quote', x)} />
+        <F label="Nguồn gr tiếp cận sau" full><input className="input" value={v('groupSource')} onChange={(e) => set('groupSource', e.target.value)} /></F>
+      </div>
+
+      {/* Chọn dịch vụ */}
+      <Section title="Chọn dịch vụ" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Sel label="Dịch vụ chính" options={cats.service?.options} value={v('service1')} onChange={(x) => set('service1', x)} />
+        <Sel label="Dịch vụ phát sinh" options={cats.service?.options} value={v('service2')} onChange={(x) => set('service2', x)} />
+        <div className="flex items-center gap-6 sm:col-span-2">
+          <span className="text-sm font-medium text-gray-700">Loại dịch vụ:</span>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={!!form.surgery} onChange={(e) => set('surgery', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Ca phẫu thuật
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={!!form.test} onChange={(e) => set('test', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Xét nghiệm
+          </label>
+        </div>
+      </div>
+
+      {/* Sale & Ghi chú */}
+      <Section title="Sale & Ghi chú" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
+        <F label="Sale 2"><input className="input" value={v('sale2')} onChange={(e) => set('sale2', e.target.value)} /></F>
+        <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
+        <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
+        <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
+        <F label="Ghi âm (đường dẫn)"><input className="input" value={v('recording')} onChange={(e) => set('recording', e.target.value)} placeholder="Link file ghi âm (MP3, WAV, M4A)" /></F>
+        <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
+        <F label="Ghi chú của sale" full><textarea className="input min-h-16" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} /></F>
+        <F label="Ghi chú của MKT" full><textarea className="input min-h-16" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} placeholder="Nhập ghi chú của MKT..." /></F>
+      </div>
     </div>
   )
 }
