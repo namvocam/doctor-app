@@ -41,6 +41,7 @@ import Pagination from '@/components/Pagination'
 import DayPagination from '@/components/DayPagination'
 import EmptyState from '@/components/EmptyState'
 import AppointmentModals from '@/components/AppointmentModals'
+import ActionMenu from '@/components/ActionMenu'
 import type { Appointment } from '@/lib/appointmentTypes'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 
@@ -676,9 +677,9 @@ function AppointmentsClient() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
-                  <Th className="sticky left-0 z-20 w-[120px] min-w-[120px] bg-brand-navy">Thao tác</Th>
-                  <Th className="sticky left-[120px] z-20 w-[56px] min-w-[56px] bg-brand-navy">STT</Th>
-                  <Th className="sticky left-[176px] z-20 w-[190px] min-w-[190px] border-r border-white/20 bg-brand-navy">
+                  <Th className="sticky left-0 z-20 w-[80px] min-w-[80px] bg-brand-navy">Thao tác</Th>
+                  <Th className="sticky left-[80px] z-20 w-[56px] min-w-[56px] bg-brand-navy">STT</Th>
+                  <Th className="sticky left-[136px] z-20 w-[190px] min-w-[190px] border-r border-white/20 bg-brand-navy">
                     Tên KH
                   </Th>
                   {visibleColumns.map((c) => (
@@ -703,23 +704,19 @@ function AppointmentsClient() {
                       key={r._id}
                       className={`border-b border-gray-100 ${bg || 'hover:bg-gray-50'}`}
                     >
-                      <Td className={`sticky left-0 z-10 w-[120px] min-w-[120px] ${stickyBg}`}>
-                        <div className="flex items-center gap-1.5">
-                          <button onClick={() => setViewing(r)} title="Xem" className="rounded p-1 text-blue-600 hover:bg-blue-50">
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setEditing(r)} title="Sửa" className="rounded p-1 text-amber-600 hover:bg-amber-50">
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setDeleting(r)} title="Xoá" className="rounded p-1 text-red-600 hover:bg-red-50">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                      <Td className={`sticky left-0 z-10 w-[80px] min-w-[80px] ${stickyBg}`}>
+                        <ActionMenu
+                          items={[
+                            { label: 'Xem', icon: Eye, onClick: () => setViewing(r) },
+                            { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
+                            { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
+                          ]}
+                        />
                       </Td>
-                      <Td className={`sticky left-[120px] z-10 w-[56px] min-w-[56px] ${stickyBg}`}>
+                      <Td className={`sticky left-[80px] z-10 w-[56px] min-w-[56px] ${stickyBg}`}>
                         {(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}
                       </Td>
-                      <Td className={`sticky left-[176px] z-10 w-[190px] min-w-[190px] border-r border-gray-200 font-medium ${stickyBg}`}>
+                      <Td className={`sticky left-[136px] z-10 w-[190px] min-w-[190px] border-r border-gray-200 font-medium ${stickyBg}`}>
                         {r.customerName}
                         {r.age ? ` / ${r.age} tuổi` : ''}
                       </Td>

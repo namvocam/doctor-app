@@ -16,7 +16,9 @@ import {
   MessageSquare,
   Bandage,
   Ban,
-  MoreVertical,
+  Pencil,
+  Camera,
+  Trash2,
   Loader2,
   type LucideIcon,
 } from 'lucide-react'
@@ -25,6 +27,8 @@ import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
 import EmptyState from '@/components/EmptyState'
 import CreateReExamModal from '@/components/CreateReExamModal'
+import ActionMenu from '@/components/ActionMenu'
+import ReExamModals, { type ReExamRecord } from '@/components/ReExamModals'
 import { REEXAM_STATUSES, REEXAM_STATUS_STYLE } from '@/lib/reexamStatus'
 
 const PAGE_SIZE = 14
@@ -82,6 +86,9 @@ function ReExamClient() {
   const [maskPhones, setMaskPhones] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [showCreate, setShowCreate] = useState(false)
+  const [editing, setEditing] = useState<ReExamRecord | null>(null)
+  const [mediaRec, setMediaRec] = useState<ReExamRecord | null>(null)
+  const [deleting, setDeleting] = useState<ReExamRecord | null>(null)
   const [rows, setRows] = useState<ReExam[]>([])
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
@@ -313,7 +320,15 @@ function ReExamClient() {
             {
               rows.map((r, i) => (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
-                  <Td><button className="text-gray-400"><MoreVertical className="h-4 w-4" /></button></Td>
+                  <Td>
+                    <ActionMenu
+                      items={[
+                        { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
+                        { label: 'Media', icon: Camera, onClick: () => setMediaRec(r) },
+                        { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
+                      ]}
+                    />
+                  </Td>
                   <Td>{(page - 1) * PAGE_SIZE + i + 1}</Td>
                   <Td className="font-medium">{r.customerName}</Td>
                   <Td>{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
@@ -360,6 +375,18 @@ function ReExamClient() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreated={() => fetchData(filters, 1)}
+      />
+
+      <ReExamModals
+        editing={editing}
+        media={mediaRec}
+        deleting={deleting}
+        onClose={() => {
+          setEditing(null)
+          setMediaRec(null)
+          setDeleting(null)
+        }}
+        onChanged={() => fetchData(filters, page)}
       />
     </div>
   )
