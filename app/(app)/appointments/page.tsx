@@ -64,8 +64,8 @@ function NoteCell({ text, ctx }: { text?: string; ctx: ColumnCtx }) {
   const t = text || '-'
   const isLong = t.length > 60
   return (
-    <div>
-      <span className={ctx.expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}>{t}</span>
+    <div className="w-60">
+      <p className={`break-words ${ctx.expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>{t}</p>
       {isLong && (
         <button
           onClick={ctx.onToggleExpand}

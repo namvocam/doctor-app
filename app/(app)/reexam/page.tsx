@@ -387,8 +387,8 @@ function ExpandableCell({
   const t = text || '-'
   const isLong = t.length > 40
   return (
-    <div>
-      <span className={expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}>{t}</span>
+    <div className="w-48">
+      <p className={`break-words ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>{t}</p>
       {isLong && (
         <button
           onClick={onToggle}
