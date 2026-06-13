@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard,
   BarChart3,
@@ -22,22 +22,38 @@ interface NavChild {
   icon?: React.ComponentType<{ className?: string }>
 }
 
+/** So khớp link con với URL hiện tại (so cả pathname lẫn query `view`). */
+function useChildActive() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  return (href: string) => {
+    const [path, query] = href.split('?')
+    if (pathname !== path) return false
+    const targetView = new URLSearchParams(query || '').get('view') ?? ''
+    const currentView = searchParams.get('view') ?? ''
+    return targetView === currentView
+  }
+}
+
 function NavLink({
   href,
   label,
   icon: Icon,
   exact = false,
+  onNavigate,
 }: {
   href: string
   label: string
   icon?: React.ComponentType<{ className?: string }>
   exact?: boolean
+  onNavigate?: () => void
 }) {
   const pathname = usePathname()
   const active = exact ? pathname === href.split('?')[0] : pathname.startsWith(href.split('?')[0])
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
         active
           ? 'bg-brand text-white font-semibold shadow-sm'
@@ -56,14 +72,17 @@ function CollapsibleGroup({
   items,
   defaultOpen = false,
   baseHref,
+  onNavigate,
 }: {
   label: string
   icon: React.ComponentType<{ className?: string }>
   items: NavChild[]
   defaultOpen?: boolean
   baseHref: string
+  onNavigate?: () => void
 }) {
   const pathname = usePathname()
+  const childActive = useChildActive()
   const groupActive = pathname.startsWith(baseHref)
   const [open, setOpen] = useState(defaultOpen || groupActive)
 
@@ -84,12 +103,13 @@ function CollapsibleGroup({
       {open && (
         <div className="mt-1 space-y-1 pl-4">
           {items.map((c) => {
-            const active = pathname + '' === c.href || pathname.startsWith(c.href.split('?')[0]) && c.href !== baseHref
+            const active = childActive(c.href)
             const ChildIcon = c.icon
             return (
               <Link
                 key={c.href}
                 href={c.href}
+                onClick={onNavigate}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
                   active ? 'bg-brand/10 text-brand font-medium' : 'text-gray-600 hover:bg-gray-100'
                 }`}
@@ -113,16 +133,13 @@ export default function Sidebar({
   onNavigate?: () => void
 }) {
   return (
-    <aside
-      className="flex h-full w-64 flex-col border-r border-gray-200 bg-white"
-      onClick={onNavigate}
-    >
+    <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
       <div className="flex h-16 items-center justify-center border-b border-gray-100 px-4">
         <Logo size="md" />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 scrollbar-thin">
-        <NavLink href="/dashboard" label="Dashboard" icon={LayoutDashboard} exact />
+        <NavLink href="/dashboard" label="Dashboard" icon={LayoutDashboard} exact onNavigate={onNavigate} />
 
         <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
           Báo cáo
@@ -131,6 +148,7 @@ export default function Sidebar({
           label="Xem báo cáo LEAD"
           icon={BarChart3}
           baseHref="/reports/lead-phau"
+          onNavigate={onNavigate}
           items={[
             { label: 'Tất cả', href: '/reports/lead-phau' },
             { label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv' },
@@ -147,6 +165,7 @@ export default function Sidebar({
           icon={CalendarClock}
           baseHref="/appointments"
           defaultOpen
+          onNavigate={onNavigate}
           items={[
             { label: 'Hôm nay (theo tháng)', href: '/appointments?view=today', icon: Clock },
             { label: 'Tất cả', href: '/appointments', icon: CalendarClock },
@@ -156,6 +175,7 @@ export default function Sidebar({
           label="Tái khám"
           icon={Stethoscope}
           baseHref="/reexam"
+          onNavigate={onNavigate}
           items={[
             { label: 'Tái khám hôm nay', href: '/reexam?view=today', icon: CalendarCheck2 },
             { label: 'Tất cả tái khám', href: '/reexam', icon: CalendarClock },
@@ -167,14 +187,12 @@ export default function Sidebar({
             <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
               Quản trị
             </p>
-            <Link
+            <NavLink
               href="/admin/categories"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
-            >
-              <Settings2 className="h-4 w-4" />
-              Cấu hình danh mục
-              <ChevronRight className="ml-auto h-4 w-4 opacity-60" />
-            </Link>
+              label="Cấu hình danh mục"
+              icon={Settings2}
+              onNavigate={onNavigate}
+            />
           </>
         )}
       </nav>
