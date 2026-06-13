@@ -1,8 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Check } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  ChevronLeft,
+  User,
+  Pencil,
+  Calendar,
+  Clock,
+  Activity,
+  ClipboardList,
+  StickyNote,
+} from 'lucide-react'
 import Modal from '@/components/Modal'
+import { formatDateVN } from '@/lib/format'
 import { REEXAM_STATUSES } from '@/lib/reexamStatus'
 
 export interface ReExamRecord {
@@ -111,34 +123,67 @@ function EditModal({
       footer={
         <>
           {error && <span className="mr-auto self-center text-sm text-red-600">{error}</span>}
-          <button onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
-            Huỷ
+          <button onClick={onClose} className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+            <ChevronLeft className="h-4 w-4" /> Quay lại
           </button>
           <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Lưu
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Lưu thay đổi
           </button>
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <F label="Khách hàng"><input className="input" value={v('customerName')} onChange={(e) => set('customerName', e.target.value)} /></F>
-        <F label="Số điện thoại"><input className="input" value={v('phone')} onChange={(e) => set('phone', e.target.value)} /></F>
-        <F label="Ngày tái khám"><input type="date" className="input" value={v('reExamDate')} onChange={(e) => set('reExamDate', e.target.value)} /></F>
-        <F label="Giờ tái khám"><input type="time" className="input" value={v('time')} onChange={(e) => set('time', e.target.value)} /></F>
-        <F label="Trạng thái">
+      {/* Phần 1: Thông tin khách hàng (chỉ đọc) */}
+      <div className="-mx-5 -mt-4 mb-4 bg-gray-100 px-5 py-3">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-gray-700">
+          <User className="h-4 w-4" /> Thông tin Khách hàng
+        </h3>
+      </div>
+      <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+        <Info label="Khách hàng" value={record?.customerName} />
+        <Info label="Dịch vụ" value={record?.service} />
+        <Info label="Số điện thoại" value={record?.phone} />
+        <Info label="Bác sĩ" value={record?.doctor} />
+        <Info label="Ngày phẫu thuật" value={formatDateVN(record?.surgeryDate)} />
+        <Info label="Media" value={record?.media} />
+      </div>
+
+      {/* Phần 2: Sửa lịch tái khám (sửa được) */}
+      <div className="-mx-5 mb-4 mt-5 bg-gray-100 px-5 py-3">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-gray-700">
+          <Pencil className="h-4 w-4" /> Sửa Lịch tái khám
+        </h3>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-6">
+        <F label="Ngày tái khám" icon={Calendar} required span={2}>
+          <input type="date" className="input" value={v('reExamDate')} onChange={(e) => set('reExamDate', e.target.value)} />
+        </F>
+        <F label="Giờ tái khám" icon={Clock} required span={2}>
+          <input type="time" className="input" value={v('time')} onChange={(e) => set('time', e.target.value)} />
+        </F>
+        <F label="Trạng thái" span={2}>
           <select className="input" value={v('status')} onChange={(e) => set('status', e.target.value)}>
             {REEXAM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </F>
-        <F label="Ngày PT"><input type="date" className="input" value={v('surgeryDate')} onChange={(e) => set('surgeryDate', e.target.value)} /></F>
-        <F label="Dịch vụ" full><input className="input" value={v('service')} onChange={(e) => set('service', e.target.value)} /></F>
-        <F label="Bác sĩ"><input className="input" value={v('doctor')} onChange={(e) => set('doctor', e.target.value)} /></F>
-        <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
-        <F label="Tình trạng trước khám" full><textarea className="input min-h-16" value={v('preExamCondition')} onChange={(e) => set('preExamCondition', e.target.value)} /></F>
-        <F label="Chỉ định của bác sĩ" full><textarea className="input min-h-16" value={v('doctorInstruction')} onChange={(e) => set('doctorInstruction', e.target.value)} /></F>
-        <F label="Ghi chú" full><textarea className="input min-h-16" value={v('note')} onChange={(e) => set('note', e.target.value)} /></F>
+        <F label="Tình trạng trước khám" icon={Activity} span={3}>
+          <textarea className="input min-h-24" value={v('preExamCondition')} onChange={(e) => set('preExamCondition', e.target.value)} placeholder="Mô tả tình trạng của khách hàng trước khi tái khám..." />
+        </F>
+        <F label="Chỉ định của bác sĩ" icon={ClipboardList} span={3}>
+          <textarea className="input min-h-24" value={v('doctorInstruction')} onChange={(e) => set('doctorInstruction', e.target.value)} placeholder="Ghi chú chỉ định của bác sĩ..." />
+        </F>
+        <F label="Ghi chú" icon={StickyNote} span={6}>
+          <textarea className="input min-h-20" value={v('note')} onChange={(e) => set('note', e.target.value)} placeholder="Ghi chú khác..." />
+        </F>
       </div>
     </Modal>
+  )
+}
+
+function Info({ label, value }: { label: string; value?: string }) {
+  return (
+    <p className="text-sm text-gray-700">
+      <span className="font-semibold">{label}:</span> {value || '-'}
+    </p>
   )
 }
 
@@ -191,7 +236,7 @@ function MediaModal({
             Huỷ
           </button>
           <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Lưu
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Lưu
           </button>
         </>
       }
@@ -268,10 +313,32 @@ function DeleteModal({
   )
 }
 
-function F({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
+const SPAN_CLASS: Record<number, string> = {
+  2: 'sm:col-span-2',
+  3: 'sm:col-span-3',
+  6: 'sm:col-span-6',
+}
+
+function F({
+  label,
+  icon: Icon,
+  required,
+  span = 6,
+  children,
+}: {
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  required?: boolean
+  span?: number
+  children: React.ReactNode
+}) {
   return (
-    <div className={full ? 'sm:col-span-2' : ''}>
-      <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
+    <div className={SPAN_CLASS[span] ?? 'sm:col-span-6'}>
+      <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+        {Icon && <Icon className="h-4 w-4" />}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </label>
       {children}
     </div>
   )
