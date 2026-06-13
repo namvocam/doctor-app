@@ -11,6 +11,7 @@ import {
   Clock,
   CalendarCheck2,
   Stethoscope,
+  Settings2,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 
@@ -93,7 +94,13 @@ function CollapsibleGroup({
   )
 }
 
-export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export default function Sidebar({
+  role,
+  onNavigate,
+}: {
+  role?: string
+  onNavigate?: () => void
+}) {
   return (
     <aside
       className="flex h-full w-64 flex-col border-r border-gray-200 bg-white"
@@ -148,6 +155,22 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             { label: 'Tất cả tái khám', href: '/reexam', icon: CalendarClock },
           ]}
         />
+
+        {role === 'admin' && (
+          <>
+            <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
+              Quản trị
+            </p>
+            <Link
+              href="/admin/categories"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            >
+              <Settings2 className="h-4 w-4" />
+              Cấu hình danh mục
+              <ChevronRight className="ml-auto h-4 w-4 opacity-60" />
+            </Link>
+          </>
+        )}
       </nav>
     </aside>
   )

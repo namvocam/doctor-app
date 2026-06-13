@@ -25,6 +25,7 @@ import {
 } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
+import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 
 const PAGE_SIZE = 14
 
@@ -161,8 +162,12 @@ function AppointmentsClient() {
 
   const [filters, setFilters] = useState({
     q: '',
-    province: 'all',
+    age: '',
+    province: '',
     service: '',
+    quote: '',
+    source: '',
+    result: '',
     from: '',
     to: '',
   })
@@ -172,6 +177,7 @@ function AppointmentsClient() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [cats, setCats] = useState<Record<string, { label: string; options: string[] }>>({})
 
   // Ẩn/hiện cột + fullscreen
   const [visible, setVisible] = useState<Record<string, boolean>>(defaultVisible)
@@ -187,6 +193,14 @@ function AppointmentsClient() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Tải danh mục lọc (admin cấu hình)
+  useEffect(() => {
+    fetch('/api/categories')
+      .then((r) => r.json())
+      .then((j) => setCats(j.data ?? {}))
+      .catch(() => {})
+  }, [])
+
   const visibleColumns = useMemo(() => COLUMNS.filter((c) => visible[c.key]), [visible])
 
   const buildQuery = useCallback(
@@ -194,8 +208,12 @@ function AppointmentsClient() {
       const p = new URLSearchParams()
       if (view) p.set('view', view)
       if (f.q) p.set('q', f.q)
-      if (f.province !== 'all') p.set('province', f.province)
+      if (f.age) p.set('age', f.age)
+      if (f.province) p.set('province', f.province)
       if (f.service) p.set('service', f.service)
+      if (f.quote) p.set('quote', f.quote)
+      if (f.source) p.set('source', f.source)
+      if (f.result) p.set('result', f.result)
       if (f.from) p.set('from', f.from)
       if (f.to) p.set('to', f.to)
       p.set('page', String(pageArg))
@@ -235,7 +253,9 @@ function AppointmentsClient() {
     fetchData(filters, 1)
   }
   function handleReset() {
-    const cleared = { q: '', province: 'all', service: '', from: '', to: '' }
+    const cleared = {
+      q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
+    }
     setFilters(cleared)
     setPage(1)
     fetchData(cleared, 1)
@@ -323,25 +343,23 @@ function AppointmentsClient() {
                 className="input"
               />
             </Field>
-            <Field label="Tỉnh">
-              <select
-                value={filters.province}
-                onChange={(e) => setFilters({ ...filters, province: e.target.value })}
-                className="input"
-              >
-                <option value="all">Tất cả tỉnh</option>
-                <option value="Hà Nội">Hà Nội</option>
-                <option value="Sài Gòn">Sài Gòn</option>
-                <option value="Khác">Khác</option>
-              </select>
+            <Field label={CATEGORY_LABELS.age}>
+              <CatSelect type="age" value={filters.age} cats={cats} onChange={(v) => setFilters({ ...filters, age: v })} />
             </Field>
-            <Field label="Dịch vụ">
-              <input
-                value={filters.service}
-                onChange={(e) => setFilters({ ...filters, service: e.target.value })}
-                placeholder="Nhập tên dịch vụ"
-                className="input"
-              />
+            <Field label={CATEGORY_LABELS.province}>
+              <CatSelect type="province" value={filters.province} cats={cats} onChange={(v) => setFilters({ ...filters, province: v })} />
+            </Field>
+            <Field label={CATEGORY_LABELS.service}>
+              <CatSelect type="service" value={filters.service} cats={cats} onChange={(v) => setFilters({ ...filters, service: v })} />
+            </Field>
+            <Field label={CATEGORY_LABELS.quote}>
+              <CatSelect type="quote" value={filters.quote} cats={cats} onChange={(v) => setFilters({ ...filters, quote: v })} />
+            </Field>
+            <Field label={CATEGORY_LABELS.source}>
+              <CatSelect type="source" value={filters.source} cats={cats} onChange={(v) => setFilters({ ...filters, source: v })} />
+            </Field>
+            <Field label={CATEGORY_LABELS.result}>
+              <CatSelect type="result" value={filters.result} cats={cats} onChange={(v) => setFilters({ ...filters, result: v })} />
             </Field>
             <Field label="Từ ngày">
               <input
@@ -545,6 +563,30 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
       {children}
     </div>
+  )
+}
+
+function CatSelect({
+  type,
+  value,
+  cats,
+  onChange,
+}: {
+  type: CategoryType
+  value: string
+  cats: Record<string, { label: string; options: string[] }>
+  onChange: (v: string) => void
+}) {
+  const options = cats[type]?.options ?? []
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="input">
+      <option value="">{CATEGORY_ALL_LABELS[type]}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
   )
 }
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {

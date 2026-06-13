@@ -16,7 +16,7 @@ export default function AppShell({ user, children }: AppShellProps) {
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar - desktop */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar role={user.role} />
       </div>
 
       {/* Sidebar - mobile drawer */}
@@ -27,7 +27,7 @@ export default function AppShell({ user, children }: AppShellProps) {
             onClick={() => setDrawerOpen(false)}
           />
           <div className="absolute left-0 top-0 h-full">
-            <Sidebar onNavigate={() => setDrawerOpen(false)} />
+            <Sidebar role={user.role} onNavigate={() => setDrawerOpen(false)} />
           </div>
         </div>
       )}

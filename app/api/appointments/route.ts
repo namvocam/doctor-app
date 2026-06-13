@@ -16,6 +16,21 @@ function endOfToday() {
   return d
 }
 
+/** Chuyển nhãn độ tuổi ("Dưới 20", "20 - 30", "Trên 60") thành điều kiện query. */
+function ageLabelToQuery(label: string): Record<string, number> | null {
+  if (/dưới/i.test(label)) {
+    const n = parseInt(label.replace(/\D/g, ''), 10)
+    return Number.isFinite(n) ? { $lt: n } : null
+  }
+  if (/trên/i.test(label)) {
+    const n = parseInt(label.replace(/\D/g, ''), 10)
+    return Number.isFinite(n) ? { $gt: n } : null
+  }
+  const m = label.match(/(\d+)\s*-\s*(\d+)/)
+  if (m) return { $gte: Number(m[1]), $lte: Number(m[2]) }
+  return null
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!(await getCurrentUser())) {
@@ -34,8 +49,8 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const province = sp.get('province')
-    if (province && province !== 'all') query.province = province
+    const province = sp.get('province')?.trim()
+    if (province) query.province = province
 
     const service = sp.get('service')?.trim()
     if (service) {
@@ -48,6 +63,21 @@ export async function GET(request: NextRequest) {
         },
       ]
     }
+
+    const age = sp.get('age')?.trim()
+    if (age) {
+      const ageQuery = ageLabelToQuery(age)
+      if (ageQuery) query.age = ageQuery
+    }
+
+    const quote = sp.get('quote')?.trim()
+    if (quote) query.quote = quote
+
+    const source = sp.get('source')?.trim()
+    if (source) query.source = source
+
+    const result = sp.get('result')?.trim()
+    if (result) query.result = result
 
     const view = sp.get('view')
     const from = sp.get('from')

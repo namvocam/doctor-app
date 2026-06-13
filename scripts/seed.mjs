@@ -70,16 +70,40 @@ const reExamSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
+const categorySchema = new mongoose.Schema(
+  {
+    type: String,
+    label: String,
+    options: [String],
+  },
+  { timestamps: true }
+)
+
 const User = mongoose.models.User ?? mongoose.model('User', userSchema)
 const Appointment =
   mongoose.models.Appointment ?? mongoose.model('Appointment', appointmentSchema)
 const ReExam = mongoose.models.ReExam ?? mongoose.model('ReExam', reExamSchema)
+const Category = mongoose.models.Category ?? mongoose.model('Category', categorySchema)
+
+// --- Danh mục (admin có thể chỉnh ở /admin/categories) ---
+const CATEGORY_DATA = [
+  { type: 'age', label: 'Độ tuổi', options: ['Dưới 20', '20 - 30', '30 - 40', '40 - 50', '50 - 60', 'Trên 60'] },
+  { type: 'province', label: 'Tỉnh', options: ['Hà Nội', 'Hồ Chí Minh', 'Bà Rịa–Vũng Tàu', 'Đà Nẵng', 'Quảng Ngãi', 'Quảng Nam'] },
+  { type: 'quote', label: 'Báo giá', options: ['45-56', '50-80tr', '60-90tr', '10-20tr'] },
+  { type: 'source', label: 'Nguồn', options: ['CTV', 'ADS', 'QUẢN LÝ CTV', 'QUẢN LÝ CTV - TIKTOK', 'ADS TIẾP CẬN', 'SẢN PHẨM BÁN LẺ', 'Khách cũ giới thiệu'] },
+  { type: 'service', label: 'Dịch vụ', options: ['Nâng ngực', 'Hút mỡ', 'Combo ngoài', 'Combo trong', 'Combo trong ngoài', 'Nâng mũi', 'Dịch vụ khác'] },
+  { type: 'result', label: 'Kết quả', options: ['Đã đặt lịch', 'Hủy lịch', 'Đã cọc', 'Failed', 'Bác sĩ từ chối', 'Phẫu thuật', 'Hoãn mổ'] },
+]
+
+const catOpts = (type) => CATEGORY_DATA.find((c) => c.type === type).options
 
 // --- Helpers ---
 const DOCTOR = 'Bs. Đinh Khanh'
-const SERVICES = ['Nâng ngực', 'Hút eo', 'Tạo hình thành bụng', 'Treo sa trễ', 'Nâng mũi', 'Cắt mí']
-const PROVINCES = ['Hà Nội', 'Sài Gòn']
-const SOURCES = ['Facebook', 'Zalo', 'Website', 'Giới thiệu', 'TikTok']
+const SERVICES = catOpts('service')
+const PROVINCES = catOpts('province')
+const SOURCES = catOpts('source')
+const QUOTES = catOpts('quote')
+const RESULTS = catOpts('result')
 const SALES = ['Trần Thị Kim Anh', 'Hoàng Thị Hậu', 'Nguyễn Thị Mai']
 
 function daysFromNow(n) {
@@ -143,8 +167,8 @@ function buildAppointments(count = 280) {
     telesaleCtv: pick(['CTV Lan', 'CTV Hương', '', 'CTV Tú'], i),
     sale1: pick(SALES, i),
     sale2: i % 3 === 0 ? pick(SALES, i + 1) : '',
-    quote: i % 2 === 0 ? `${10 + i}tr` : 'Chưa báo giá',
-    result: pick(['Đã chốt', 'Đang tư vấn', 'Hẹn lại', 'Từ chối'], i),
+    quote: pick(QUOTES, i),
+    result: pick(RESULTS, i),
     saleNote: pick(
       ['KH tiềm năng cao', 'Đang so sánh giá', 'Hẹn tái tư vấn', 'Đã chuyển cọc', ''],
       i
@@ -211,6 +235,11 @@ async function main() {
   const reexams = buildReExams()
   await ReExam.insertMany(reexams)
   console.log(`✅ Đã tạo ${reexams.length} lịch tái khám`)
+
+  // Categories (danh mục lọc)
+  await Category.deleteMany({})
+  await Category.insertMany(CATEGORY_DATA)
+  console.log(`✅ Đã tạo ${CATEGORY_DATA.length} danh mục lọc`)
 
   console.log('\n🎉 Seed hoàn tất!')
   console.log('   Đăng nhập: bskhanh / 123456  (admin)')

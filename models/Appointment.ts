@@ -9,7 +9,7 @@ const appointmentSchema = new Schema(
     doctor: { type: String, trim: true },
     surgery: { type: Boolean, default: false },
     address: { type: String, trim: true },
-    province: { type: String, enum: ['Hà Nội', 'Sài Gòn', 'Khác'], default: 'Khác' },
+    province: { type: String, trim: true },
     service1: { type: String, trim: true },
     service2: { type: String, trim: true },
     test: { type: Boolean, default: false },
