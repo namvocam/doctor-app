@@ -118,7 +118,19 @@ const COLUMNS: ColumnDef[] = [
   { key: 'telesaleCtv', label: 'Telesale CTV', tdClass: 'whitespace-nowrap', render: (r) => r.telesaleCtv || '-' },
   { key: 'sale1', label: 'Sale 1', tdClass: 'whitespace-nowrap', render: (r) => r.sale1 || '-' },
   { key: 'sale2', label: 'Sale 2', tdClass: 'whitespace-nowrap', render: (r) => r.sale2 || '-' },
-  { key: 'result', label: 'Kết quả', render: (r) => r.result ?? '-' },
+  {
+    key: 'result',
+    label: 'Kết quả',
+    tdClass: 'whitespace-nowrap',
+    render: (r) =>
+      r.result ? (
+        <span className="inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+          {r.result}
+        </span>
+      ) : (
+        '-'
+      ),
+  },
   {
     key: 'saleNote',
     label: 'Ghi chú của sale',
@@ -143,16 +155,29 @@ const COLUMNS: ColumnDef[] = [
     key: 'revenue',
     label: 'Doanh Thu',
     tdClass: 'whitespace-nowrap',
-    render: (r) => (
-      <span className={`font-semibold ${r.highlight ? '' : 'text-green-600'}`}>
-        {formatCurrency(r.revenue)}
-      </span>
-    ),
+    render: (r) => <span className="font-semibold text-green-700">{formatCurrency(r.revenue)}</span>,
   },
 ]
 
 function defaultVisible(): Record<string, boolean> {
   return Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
+}
+
+/**
+ * Màu nền hàng theo Kết quả (status). Mới có một số status; bổ sung thêm sau.
+ * Thêm dòng mới: '<Tên kết quả>': 'bg-<màu tailwind>'.
+ */
+const STATUS_ROW_BG: Record<string, string> = {
+  'Đã cọc': 'bg-cyan-300',
+  Failed: 'bg-purple-300',
+  'Hủy lịch': 'bg-slate-400',
+}
+
+/** Trả về class nền cho hàng dựa theo kết quả (rỗng nếu chưa cấu hình màu). */
+function rowBg(r: Appointment): string {
+  if (r.result && STATUS_ROW_BG[r.result]) return STATUS_ROW_BG[r.result]
+  if (r.highlight) return 'bg-orange-300'
+  return ''
 }
 
 /** Tháng hiện tại dạng "YYYY-MM" cho input type=month. */
@@ -648,13 +673,12 @@ function AppointmentsClient() {
                     onToggleExpand: () =>
                       setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] })),
                   }
-                  const stickyBg = r.highlight ? 'bg-orange-400' : 'bg-white'
+                  const bg = rowBg(r)
+                  const stickyBg = bg || 'bg-white'
                   return (
                     <tr
                       key={r._id}
-                      className={`border-b border-gray-100 ${
-                        r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
-                      }`}
+                      className={`border-b border-gray-100 ${bg || 'hover:bg-gray-50'}`}
                     >
                       <Td className={`sticky left-0 z-10 w-[120px] min-w-[120px] ${stickyBg}`}>
                         <div className="flex items-center gap-1.5">
