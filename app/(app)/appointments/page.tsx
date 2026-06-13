@@ -9,7 +9,6 @@ import {
   RotateCcw,
   FileDown,
   Check,
-  MoreVertical,
   Loader2,
   Columns3,
   Maximize2,
@@ -24,6 +23,9 @@ import {
   CalendarCheck2,
   Clock,
   CircleDot,
+  Eye,
+  Pencil,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -37,41 +39,11 @@ import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
 import DayPagination from '@/components/DayPagination'
 import EmptyState from '@/components/EmptyState'
+import AppointmentModals from '@/components/AppointmentModals'
+import type { Appointment } from '@/lib/appointmentTypes'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 
 const PAGE_SIZE = 14
-
-interface Appointment {
-  _id: string
-  customerName: string
-  age?: number
-  phone?: string
-  performAt: string
-  doctor?: string
-  surgery?: boolean
-  address?: string
-  province?: string
-  service1?: string
-  service2?: string
-  test?: boolean
-  telesaleNote?: string
-  source?: string
-  subSource?: string
-  groupSource?: string
-  telesale?: string
-  telesaleCtv?: string
-  sale1?: string
-  sale2?: string
-  result?: string
-  saleNote?: string
-  media?: string
-  mktNote?: string
-  dataReceivedAt?: string
-  createdAt?: string
-  recording?: string
-  revenue?: number
-  highlight?: boolean
-}
 
 interface ColumnCtx {
   maskPhones: boolean
@@ -106,14 +78,8 @@ function NoteCell({ text, ctx }: { text?: string; ctx: ColumnCtx }) {
   )
 }
 
-/** Các cột có thể ẩn/hiện (Thao tác & STT luôn hiển thị). */
+/** Các cột có thể ẩn/hiện (Thao tác, STT, Tên KH luôn cố định bên trái). */
 const COLUMNS: ColumnDef[] = [
-  {
-    key: 'customerName',
-    label: 'Tên KH',
-    tdClass: 'font-medium',
-    render: (r) => `${r.customerName}${r.age ? ` / ${r.age} tuổi` : ''}`,
-  },
   { key: 'performAt', label: 'Ngày giờ thực hiện', tdClass: 'whitespace-nowrap', render: (r) => formatDateTimeVN(r.performAt) },
   { key: 'doctor', label: 'Bác sĩ', tdClass: 'whitespace-nowrap', render: (r) => r.doctor ?? '-' },
   {
@@ -227,6 +193,10 @@ function AppointmentsClient() {
   const [showFilter, setShowFilter] = useState(false) // mặc định thu gọn bộ lọc
   const [maskPhones, setMaskPhones] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  // Popup thao tác
+  const [viewing, setViewing] = useState<Appointment | null>(null)
+  const [editing, setEditing] = useState<Appointment | null>(null)
+  const [deleting, setDeleting] = useState<Appointment | null>(null)
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -658,8 +628,11 @@ function AppointmentsClient() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
-                  <Th>Thao tác</Th>
-                  <Th>STT</Th>
+                  <Th className="sticky left-0 z-20 w-[120px] min-w-[120px] bg-brand-navy">Thao tác</Th>
+                  <Th className="sticky left-[120px] z-20 w-[56px] min-w-[56px] bg-brand-navy">STT</Th>
+                  <Th className="sticky left-[176px] z-20 w-[190px] min-w-[190px] border-r border-white/20 bg-brand-navy">
+                    Tên KH
+                  </Th>
                   {visibleColumns.map((c) => (
                     <Th key={c.key} className={c.thClass}>
                       {c.label}
@@ -675,6 +648,7 @@ function AppointmentsClient() {
                     onToggleExpand: () =>
                       setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] })),
                   }
+                  const stickyBg = r.highlight ? 'bg-orange-400' : 'bg-white'
                   return (
                     <tr
                       key={r._id}
@@ -682,12 +656,26 @@ function AppointmentsClient() {
                         r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <Td>
-                        <button className={r.highlight ? 'text-white' : 'text-gray-400'}>
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                      <Td className={`sticky left-0 z-10 w-[120px] min-w-[120px] ${stickyBg}`}>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => setViewing(r)} title="Xem" className="rounded p-1 text-blue-600 hover:bg-blue-50">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setEditing(r)} title="Sửa" className="rounded p-1 text-amber-600 hover:bg-amber-50">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setDeleting(r)} title="Xoá" className="rounded p-1 text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </Td>
-                      <Td>{(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}</Td>
+                      <Td className={`sticky left-[120px] z-10 w-[56px] min-w-[56px] ${stickyBg}`}>
+                        {(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}
+                      </Td>
+                      <Td className={`sticky left-[176px] z-10 w-[190px] min-w-[190px] border-r border-gray-200 font-medium ${stickyBg}`}>
+                        {r.customerName}
+                        {r.age ? ` / ${r.age} tuổi` : ''}
+                      </Td>
                       {visibleColumns.map((c) => (
                         <Td key={c.key} className={c.tdClass}>
                           {c.render(r, ctx)}
@@ -715,6 +703,19 @@ function AppointmentsClient() {
           />
         )}
       </div>
+
+      <AppointmentModals
+        viewing={viewing}
+        editing={editing}
+        deleting={deleting}
+        cats={cats}
+        onClose={() => {
+          setViewing(null)
+          setEditing(null)
+          setDeleting(null)
+        }}
+        onChanged={() => fetchData(filters, page, month)}
+      />
     </div>
   )
 }
