@@ -11,7 +11,7 @@ export default function DayPagination({
   onChange: (day: number) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 py-1">
+    <div className="flex flex-wrap items-center justify-center gap-1.5 py-1">
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => (
         <button
           key={d}

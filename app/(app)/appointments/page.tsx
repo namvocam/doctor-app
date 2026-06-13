@@ -15,6 +15,16 @@ import {
   Maximize2,
   Minimize2,
   ChevronDown,
+  ClipboardList,
+  Wallet,
+  AlertCircle,
+  Ban,
+  Scissors,
+  CalendarX2,
+  CalendarCheck2,
+  Clock,
+  CircleDot,
+  type LucideIcon,
 } from 'lucide-react'
 import {
   formatDateTimeVN,
@@ -309,12 +319,10 @@ function AppointmentsClient() {
     fetchData(filters, p, month)
   }
   function handleReset() {
-    // Chỉ xoá các input bộ lọc, giữ nguyên tháng/ngày đang chọn
-    const cleared = {
+    // Chỉ xoá các input bộ lọc; KHÔNG gọi API (phải bấm "Tìm kiếm" mới lấy kết quả)
+    setFilters({
       q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
-    }
-    setFilters(cleared)
-    fetchData(cleared, page, month)
+    })
   }
   function handlePageChange(p: number) {
     setPage(p)
@@ -373,8 +381,19 @@ function AppointmentsClient() {
   )
 
   const colCount = visibleColumns.length + 2 // + Thao tác + STT
-  // Đếm số trường bộ lọc đang có giá trị (trừ tháng - luôn có giá trị mặc định)
-  const activeFilterCount = Object.values(filters).filter((v) => v).length
+  // Đếm số trường bộ lọc đang có giá trị; chế độ "theo tháng" tính thêm ô "Tháng thực hiện"
+  const activeFilterCount =
+    Object.values(filters).filter((v) => v).length + (isToday ? 1 : 0)
+
+  // Thống kê theo kết quả của ngày đang chọn (chế độ "theo tháng")
+  const statusCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const r of rows) {
+      const k = r.result || 'Khác'
+      m[k] = (m[k] || 0) + 1
+    }
+    return m
+  }, [rows])
 
   return (
     <div className="space-y-4">
@@ -485,6 +504,38 @@ function AppointmentsClient() {
             : 'space-y-4'
         }
       >
+        {/* Box thống kê theo kết quả của ngày đang chọn (chế độ "theo tháng") */}
+        {isToday && !loading && (
+          <div className="flex flex-wrap gap-3">
+            <StatusBox
+              icon={ClipboardList}
+              count={total}
+              label="Tổng lịch hẹn"
+              color="text-brand"
+              bg="bg-brand/10"
+            />
+            {(cats.result?.options ?? Object.keys(statusCounts))
+              .filter((s) => statusCounts[s])
+              .map((s) => {
+                const meta = STATUS_META[s] ?? {
+                  icon: CircleDot,
+                  color: 'text-gray-500',
+                  bg: 'bg-gray-100',
+                }
+                return (
+                  <StatusBox
+                    key={s}
+                    icon={meta.icon}
+                    count={statusCounts[s]}
+                    label={meta.label ?? s}
+                    color={meta.color}
+                    bg={meta.bg}
+                  />
+                )
+              })}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-gray-600">
@@ -663,6 +714,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
       {children}
+    </div>
+  )
+}
+
+// Icon + màu + nhãn rút gọn cho từng kết quả (box thống kê theo ngày)
+const STATUS_META: Record<string, { icon: LucideIcon; color: string; bg: string; label?: string }> = {
+  'Đã đặt lịch': { icon: CalendarCheck2, color: 'text-blue-600', bg: 'bg-blue-50' },
+  'Đã cọc': { icon: Wallet, color: 'text-teal-600', bg: 'bg-teal-50' },
+  Failed: { icon: AlertCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
+  'Bác sĩ từ chối': { icon: Ban, color: 'text-amber-600', bg: 'bg-amber-50', label: 'BS từ chối' },
+  'Phẫu thuật': { icon: Scissors, color: 'text-orange-600', bg: 'bg-orange-50' },
+  'Hủy lịch': { icon: CalendarX2, color: 'text-gray-500', bg: 'bg-gray-100' },
+  'Hoãn mổ': { icon: Clock, color: 'text-slate-600', bg: 'bg-slate-100' },
+}
+
+function StatusBox({
+  icon: Icon,
+  count,
+  label,
+  color,
+  bg,
+}: {
+  icon: LucideIcon
+  count: number
+  label: string
+  color: string
+  bg: string
+}) {
+  return (
+    <div className="flex min-w-[150px] items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
+      <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <div>
+        <p className={`text-xl font-bold ${color}`}>{formatNumber(count)}</p>
+        <p className="text-xs text-gray-500">{label}</p>
+      </div>
     </div>
   )
 }
