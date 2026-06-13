@@ -70,8 +70,9 @@ function ReExamClient() {
     from: '',
     to: '',
   })
-  const [showFilter, setShowFilter] = useState(true)
+  const [showFilter, setShowFilter] = useState(false) // mặc định thu gọn bộ lọc
   const [maskPhones, setMaskPhones] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [rows, setRows] = useState<ReExam[]>([])
   const [stats, setStats] = useState({ total: 0, overdue: 0, complaints: 0 })
   const [total, setTotal] = useState(0)
@@ -165,6 +166,8 @@ function ReExamClient() {
     exportCSV('tai-kham.csv', headers, data)
   }
 
+  const activeFilterCount = Object.values(filters).filter((v) => v).length
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -179,6 +182,11 @@ function ReExamClient() {
             className="flex items-center gap-2 rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/5"
           >
             <SlidersHorizontal className="h-4 w-4" /> Bộ lọc
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
           <button className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
             <Plus className="h-4 w-4" /> Tạo lịch tái khám
@@ -285,7 +293,7 @@ function ReExamClient() {
               rows.map((r, i) => (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
                   <Td><button className="text-gray-400"><MoreVertical className="h-4 w-4" /></button></Td>
-                  <Td>{i + 1}</Td>
+                  <Td>{(page - 1) * PAGE_SIZE + i + 1}</Td>
                   <Td className="font-medium">{r.customerName}</Td>
                   <Td>{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
                   <Td className="font-medium text-brand">{formatDateVN(r.reExamDate)}</Td>
@@ -295,7 +303,15 @@ function ReExamClient() {
                       {r.status ?? '-'}
                     </span>
                   </Td>
-                  <Td>{r.service ?? '-'}</Td>
+                  <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
+                    <ExpandableCell
+                      text={r.service}
+                      expanded={!!expandedRows[r._id]}
+                      onToggle={() =>
+                        setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] }))
+                      }
+                    />
+                  </td>
                   <Td>{formatDateVN(r.surgeryDate)}</Td>
                   <Td>{r.media ?? '-'}</Td>
                   <Td>{r.doctor ?? '-'}</Td>
@@ -326,6 +342,33 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
       {children}
+    </div>
+  )
+}
+
+/** Ô có thể dài: cố định 2 dòng, hiện "Xem thêm" để mở rộng nếu dài. */
+function ExpandableCell({
+  text,
+  expanded,
+  onToggle,
+}: {
+  text?: string
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const t = text || '-'
+  const isLong = t.length > 40
+  return (
+    <div>
+      <span className={expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}>{t}</span>
+      {isLong && (
+        <button
+          onClick={onToggle}
+          className="mt-0.5 block text-xs font-medium text-brand hover:underline"
+        >
+          {expanded ? 'Thu gọn' : 'Xem thêm'}
+        </button>
+      )}
     </div>
   )
 }
