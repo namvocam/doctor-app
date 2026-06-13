@@ -9,13 +9,13 @@ const SIZES = {
   lg: { main: 'text-4xl', sub: 'text-xs tracking-[0.55em]' },
 }
 
-/** Logo chữ "TRUNG ANH GROUP" theo nhận diện thương hiệu. */
+/** Logo chữ "NHƯ Ý GROUP" theo nhận diện thương hiệu. */
 export default function Logo({ className = '', size = 'md' }: LogoProps) {
   const s = SIZES[size]
   return (
     <div className={`flex flex-col items-center leading-none ${className}`}>
       <span className={`font-extrabold tracking-tight text-brand-navy ${s.main}`}>
-        TRUNG ANH
+        NHƯ Ý
       </span>
       <span className={`font-semibold text-brand ${s.sub}`}>GROUP</span>
     </div>

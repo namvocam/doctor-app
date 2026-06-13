@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   CalendarClock,
@@ -11,6 +11,10 @@ import {
   Check,
   MoreVertical,
   Loader2,
+  Columns3,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
 } from 'lucide-react'
 import {
   formatDateTimeVN,
@@ -56,6 +60,101 @@ interface Appointment {
   highlight?: boolean
 }
 
+interface ColumnCtx {
+  maskPhones: boolean
+}
+
+interface ColumnDef {
+  key: string
+  label: string
+  thClass?: string
+  tdClass?: string
+  render: (r: Appointment, ctx: ColumnCtx) => React.ReactNode
+}
+
+/** Các cột có thể ẩn/hiện (Thao tác & STT luôn hiển thị). */
+const COLUMNS: ColumnDef[] = [
+  {
+    key: 'customerName',
+    label: 'Tên KH',
+    tdClass: 'font-medium',
+    render: (r) => `${r.customerName}${r.age ? ` / ${r.age} tuổi` : ''}`,
+  },
+  { key: 'performAt', label: 'Ngày giờ thực hiện', tdClass: 'whitespace-nowrap', render: (r) => formatDateTimeVN(r.performAt) },
+  { key: 'doctor', label: 'Bác sĩ', tdClass: 'whitespace-nowrap', render: (r) => r.doctor ?? '-' },
+  {
+    key: 'surgery',
+    label: 'Phẫu thuật',
+    thClass: 'text-center',
+    tdClass: 'text-center',
+    render: (r) => (r.surgery ? <Check className="mx-auto h-4 w-4" /> : '-'),
+  },
+  {
+    key: 'phone',
+    label: 'Số ĐT/Hộ chiếu',
+    tdClass: 'whitespace-nowrap',
+    render: (r, c) => (c.maskPhones ? maskPhone(r.phone) : r.phone ?? '-'),
+  },
+  { key: 'address', label: 'Địa chỉ', render: (r) => r.address ?? '-' },
+  { key: 'service1', label: 'Dịch vụ 1', render: (r) => r.service1 ?? '-' },
+  { key: 'service2', label: 'Dịch vụ 2', render: (r) => r.service2 || '-' },
+  {
+    key: 'test',
+    label: 'Xét nghiệm',
+    thClass: 'text-center',
+    tdClass: 'text-center',
+    render: (r) => (r.test ? <Check className="mx-auto h-4 w-4" /> : '-'),
+  },
+  {
+    key: 'telesaleNote',
+    label: 'Ghi chú của Telesale',
+    tdClass: 'min-w-[200px] max-w-xs',
+    render: (r) => <span className="line-clamp-2">{r.telesaleNote ?? '-'}</span>,
+  },
+  { key: 'source', label: 'Nguồn', render: (r) => r.source ?? '-' },
+  { key: 'subSource', label: 'Nguồn phụ', render: (r) => r.subSource || '-' },
+  { key: 'groupSource', label: 'Nguồn gr tiếp cận sau', render: (r) => r.groupSource || '-' },
+  { key: 'telesale', label: 'Telesale', tdClass: 'whitespace-nowrap', render: (r) => r.telesale || '-' },
+  { key: 'telesaleCtv', label: 'Telesale CTV', tdClass: 'whitespace-nowrap', render: (r) => r.telesaleCtv || '-' },
+  { key: 'sale1', label: 'Sale 1', tdClass: 'whitespace-nowrap', render: (r) => r.sale1 || '-' },
+  { key: 'sale2', label: 'Sale 2', tdClass: 'whitespace-nowrap', render: (r) => r.sale2 || '-' },
+  { key: 'result', label: 'Kết quả', render: (r) => r.result ?? '-' },
+  {
+    key: 'saleNote',
+    label: 'Ghi chú của sale',
+    tdClass: 'min-w-[180px] max-w-xs',
+    render: (r) => <span className="line-clamp-2">{r.saleNote || '-'}</span>,
+  },
+  { key: 'media', label: 'Media', render: (r) => r.media || '-' },
+  {
+    key: 'mktNote',
+    label: 'Ghi chú của MKT',
+    tdClass: 'min-w-[180px] max-w-xs',
+    render: (r) => <span className="line-clamp-2">{r.mktNote || '-'}</span>,
+  },
+  { key: 'dataReceivedAt', label: 'Ngày nhận data', tdClass: 'whitespace-nowrap', render: (r) => formatDateVN(r.dataReceivedAt) },
+  { key: 'createdAt', label: 'Ngày tạo lịch', tdClass: 'whitespace-nowrap', render: (r) => formatDateVN(r.createdAt) },
+  {
+    key: 'recording',
+    label: 'Ghi âm',
+    render: (r) => (r.recording ? <audio controls src={r.recording} className="h-8 w-40" /> : '-'),
+  },
+  {
+    key: 'revenue',
+    label: 'Doanh Thu',
+    tdClass: 'whitespace-nowrap',
+    render: (r) => (
+      <span className={`font-semibold ${r.highlight ? '' : 'text-green-600'}`}>
+        {formatCurrency(r.revenue)}
+      </span>
+    ),
+  },
+]
+
+function defaultVisible(): Record<string, boolean> {
+  return Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
+}
+
 function AppointmentsClient() {
   const searchParams = useSearchParams()
   const view = searchParams.get('view') ?? ''
@@ -73,6 +172,22 @@ function AppointmentsClient() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+
+  // Ẩn/hiện cột + fullscreen
+  const [visible, setVisible] = useState<Record<string, boolean>>(defaultVisible)
+  const [showCols, setShowCols] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const colRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (colRef.current && !colRef.current.contains(e.target as Node)) setShowCols(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const visibleColumns = useMemo(() => COLUMNS.filter((c) => visible[c.key]), [visible])
 
   const buildQuery = useCallback(
     (f: typeof filters, pageArg: number) => {
@@ -175,6 +290,9 @@ function AppointmentsClient() {
     [view]
   )
 
+  const colCount = visibleColumns.length + 2 // + Thao tác + STT
+  const ctx: ColumnCtx = { maskPhones }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -260,150 +378,163 @@ function AppointmentsClient() {
         </form>
       )}
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-gray-600">
-          Đã tìm thấy <span className="font-bold text-gray-900">{formatNumber(total)}</span> lịch hẹn.
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-          >
-            <FileDown className="h-4 w-4" /> Xuất CSV
-          </button>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={maskPhones}
-              onChange={(e) => setMaskPhones(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
-            />
-            Che số điện thoại
-          </label>
-        </div>
-      </div>
+      {/* Vùng kết quả (có thể fullscreen) */}
+      <div
+        className={
+          fullscreen
+            ? 'fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-gray-100 p-4'
+            : 'space-y-4'
+        }
+      >
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            Đã tìm thấy <span className="font-bold text-gray-900">{formatNumber(total)}</span> lịch hẹn.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFullscreen((v) => !v)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {fullscreen ? 'Thoát' : 'Fullscreen'}
+            </button>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin">
-        <table className="min-w-[2600px] w-full text-sm">
-          <thead>
-            <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
-              <Th>Thao tác</Th>
-              <Th>STT</Th>
-              <Th>Tên KH</Th>
-              <Th>Ngày giờ thực hiện</Th>
-              <Th>Bác sĩ</Th>
-              <Th>Phẫu thuật</Th>
-              <Th>Số ĐT/Hộ chiếu</Th>
-              <Th>Địa chỉ</Th>
-              <Th>Dịch vụ 1</Th>
-              <Th>Dịch vụ 2</Th>
-              <Th>Xét nghiệm</Th>
-              <Th>Ghi chú của Telesale</Th>
-              <Th>Nguồn</Th>
-              <Th>Nguồn phụ</Th>
-              <Th>Nguồn gr tiếp cận sau</Th>
-              <Th>Telesale</Th>
-              <Th>Telesale CTV</Th>
-              <Th>Sale 1</Th>
-              <Th>Sale 2</Th>
-              <Th>Kết quả</Th>
-              <Th>Ghi chú của sale</Th>
-              <Th>Media</Th>
-              <Th>Ghi chú của MKT</Th>
-              <Th>Ngày nhận data</Th>
-              <Th>Ngày tạo lịch</Th>
-              <Th>Ghi âm</Th>
-              <Th>Doanh Thu</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={27} className="py-12 text-center text-gray-400">
-                  <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={27} className="py-12 text-center text-gray-400">
-                  Không có lịch hẹn nào.
-                </td>
-              </tr>
-            ) : (
-              rows.map((r, i) => (
-                <tr
-                  key={r._id}
-                  className={`border-b border-gray-100 ${
-                    r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <Td>
-                    <button className={r.highlight ? 'text-white' : 'text-gray-400'}>
-                      <MoreVertical className="h-4 w-4" />
+            {/* Cột dropdown */}
+            <div className="relative" ref={colRef}>
+              <button
+                onClick={() => setShowCols((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Columns3 className="h-4 w-4" /> Cột <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              {showCols && (
+                <div className="absolute right-0 top-11 z-50 w-72 rounded-xl border border-gray-100 bg-white p-3 shadow-lg">
+                  <p className="mb-2 text-sm font-semibold text-gray-800">Ẩn/hiện &amp; chọn cột</p>
+                  <div className="mb-2 flex gap-2">
+                    <button
+                      onClick={() => setVisible(defaultVisible())}
+                      className="flex-1 rounded-lg bg-brand py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+                    >
+                      Tất cả
                     </button>
-                  </Td>
-                  <Td>{i + 1}</Td>
-                  <Td className="font-medium">
-                    {r.customerName}
-                    {r.age ? ` / ${r.age} tuổi` : ''}
-                  </Td>
-                  <Td className="whitespace-nowrap">{formatDateTimeVN(r.performAt)}</Td>
-                  <Td className="whitespace-nowrap">{r.doctor ?? '-'}</Td>
-                  <Td className="text-center">{r.surgery ? <Check className="mx-auto h-4 w-4" /> : '-'}</Td>
-                  <Td className="whitespace-nowrap">{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
-                  <Td>{r.address ?? '-'}</Td>
-                  <Td>{r.service1 ?? '-'}</Td>
-                  <Td>{r.service2 || '-'}</Td>
-                  <Td className="text-center">{r.test ? <Check className="mx-auto h-4 w-4" /> : '-'}</Td>
-                  <Td className="min-w-[200px] max-w-xs">
-                    <span className="line-clamp-2">{r.telesaleNote ?? '-'}</span>
-                  </Td>
-                  <Td>{r.source ?? '-'}</Td>
-                  <Td>{r.subSource || '-'}</Td>
-                  <Td>{r.groupSource || '-'}</Td>
-                  <Td className="whitespace-nowrap">{r.telesale || '-'}</Td>
-                  <Td className="whitespace-nowrap">{r.telesaleCtv || '-'}</Td>
-                  <Td className="whitespace-nowrap">{r.sale1 || '-'}</Td>
-                  <Td className="whitespace-nowrap">{r.sale2 || '-'}</Td>
-                  <Td>{r.result ?? '-'}</Td>
-                  <Td className="min-w-[180px] max-w-xs">
-                    <span className="line-clamp-2">{r.saleNote || '-'}</span>
-                  </Td>
-                  <Td>{r.media || '-'}</Td>
-                  <Td className="min-w-[180px] max-w-xs">
-                    <span className="line-clamp-2">{r.mktNote || '-'}</span>
-                  </Td>
-                  <Td className="whitespace-nowrap">{formatDateVN(r.dataReceivedAt)}</Td>
-                  <Td className="whitespace-nowrap">{formatDateVN(r.createdAt)}</Td>
-                  <Td>
-                    {r.recording ? (
-                      <audio controls src={r.recording} className="h-8 w-40" />
-                    ) : (
-                      '-'
-                    )}
-                  </Td>
-                  <Td className={`whitespace-nowrap font-semibold ${r.highlight ? 'text-white' : 'text-green-600'}`}>
-                    {formatCurrency(r.revenue)}
-                  </Td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <button
+                      onClick={() =>
+                        setVisible(Object.fromEntries(COLUMNS.map((c) => [c.key, false])))
+                      }
+                      className="flex-1 rounded-lg border border-gray-300 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    >
+                      Bỏ hết
+                    </button>
+                  </div>
+                  <div className="max-h-72 space-y-0.5 overflow-y-auto scrollbar-thin pr-1">
+                    {COLUMNS.map((c) => (
+                      <label
+                        key={c.key}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!visible[c.key]}
+                          onChange={() =>
+                            setVisible((prev) => ({ ...prev, [c.key]: !prev[c.key] }))
+                          }
+                          className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
-      {/* Pagination */}
-      {!loading && total > 0 && (
-        <Pagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          unit="lịch hẹn"
-          onPageChange={handlePageChange}
-        />
-      )}
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <FileDown className="h-4 w-4" /> Xuất CSV
+            </button>
+            <label className="flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={maskPhones}
+                onChange={(e) => setMaskPhones(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+              />
+              Che số điện thoại
+            </label>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div
+          className={`overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin ${
+            fullscreen ? 'flex-1' : ''
+          }`}
+        >
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
+                <Th>Thao tác</Th>
+                <Th>STT</Th>
+                {visibleColumns.map((c) => (
+                  <Th key={c.key} className={c.thClass}>
+                    {c.label}
+                  </Th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={colCount} className="py-12 text-center text-gray-400">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={colCount} className="py-12 text-center text-gray-400">
+                    Không có lịch hẹn nào.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r, i) => (
+                  <tr
+                    key={r._id}
+                    className={`border-b border-gray-100 ${
+                      r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <Td>
+                      <button className={r.highlight ? 'text-white' : 'text-gray-400'}>
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </Td>
+                    <Td>{(page - 1) * PAGE_SIZE + i + 1}</Td>
+                    {visibleColumns.map((c) => (
+                      <Td key={c.key} className={c.tdClass}>
+                        {c.render(r, ctx)}
+                      </Td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {!loading && total > 0 && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            unit="lịch hẹn"
+            onPageChange={handlePageChange}
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -416,8 +547,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   )
 }
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-3 py-3">{children}</th>
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <th className={`whitespace-nowrap px-3 py-3 ${className}`}>{children}</th>
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-3 py-3 align-top ${className}`}>{children}</td>

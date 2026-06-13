@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Trung Anh Group - Quản lý phòng khám",
-  description: "Hệ thống quản lý lịch hẹn và tái khám - Trung Anh Group",
+  title: "Như Ý Group - Quản lý phòng khám",
+  description: "Hệ thống quản lý lịch hẹn và tái khám - Như Ý Group",
 };
 
 export default function RootLayout({
