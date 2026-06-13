@@ -45,6 +45,14 @@ interface ReExam {
   media?: string
   doctor?: string
   sale1?: string
+  preExamCondition?: string
+  doctorInstruction?: string
+  note?: string
+  createdAt?: string
+}
+
+function stickyBgFor(status?: string) {
+  return REEXAM_STATUS_STYLE[status ?? '']?.row ?? 'bg-white'
 }
 
 function rowTint(status?: string) {
@@ -173,11 +181,12 @@ function ReExamClient() {
   }
 
   function handleExport() {
-    const headers = ['STT', 'Khách hàng', 'Số điện thoại', 'Ngày tái khám', 'Giờ', 'Trạng thái', 'Dịch vụ', 'Ngày PT', 'Media', 'Bác sĩ', 'Sale 1']
+    const headers = ['STT', 'Khách hàng', 'Số điện thoại', 'Ngày tái khám', 'Giờ', 'Trạng thái', 'Dịch vụ', 'Ngày PT', 'Media', 'Bác sĩ', 'Sale 1', 'Tình trạng trước khám', 'Chỉ định của bác sĩ', 'Ghi chú', 'Ngày tạo']
     const data = rows.map((r, i) => [
       i + 1, r.customerName, maskPhones ? maskPhone(r.phone) : r.phone ?? '',
       formatDateVN(r.reExamDate), r.time ?? '', r.status ?? '', r.service ?? '',
       formatDateVN(r.surgeryDate), r.media ?? '', r.doctor ?? '', r.sale1 ?? '',
+      r.preExamCondition ?? '', r.doctorInstruction ?? '', r.note ?? '', formatDateVN(r.createdAt),
     ])
     exportCSV('tai-kham.csv', headers, data)
   }
@@ -308,19 +317,28 @@ function ReExamClient() {
         ) : rows.length === 0 ? (
           <EmptyState />
         ) : (
-        <table className="min-w-[1100px] w-full text-sm">
+        <table className="w-full text-sm">
           <thead>
             <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
-              <Th>Thao tác</Th><Th>STT</Th><Th>Khách hàng</Th><Th>Số điện thoại</Th>
+              <th className="sticky left-0 z-20 w-[64px] min-w-[64px] whitespace-nowrap bg-brand-navy px-3 py-3">Thao tác</th>
+              <th className="sticky left-[64px] z-20 w-[56px] min-w-[56px] whitespace-nowrap bg-brand-navy px-3 py-3">STT</th>
+              <th className="sticky left-[120px] z-20 w-[170px] min-w-[170px] whitespace-nowrap border-r border-white/20 bg-brand-navy px-3 py-3">Khách hàng</th>
+              <Th>Số điện thoại</Th>
               <Th>Ngày tái khám</Th><Th>Giờ</Th><Th>Trạng thái</Th><Th>Dịch vụ</Th>
               <Th>Ngày PT</Th><Th>Media</Th><Th>Bác sĩ</Th><Th>Sale 1</Th>
+              <Th>Tình trạng trước khám</Th><Th>Chỉ định của bác sĩ</Th><Th>Ghi chú</Th><Th>Ngày tạo</Th>
             </tr>
           </thead>
           <tbody>
             {
-              rows.map((r, i) => (
+              rows.map((r, i) => {
+                const sbg = stickyBgFor(r.status)
+                const toggle = () =>
+                  setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] }))
+                const exp = !!expandedRows[r._id]
+                return (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
-                  <Td>
+                  <td className={`sticky left-0 z-10 w-[64px] min-w-[64px] px-3 py-3 align-middle ${sbg}`}>
                     <ActionMenu
                       items={[
                         { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
@@ -328,9 +346,13 @@ function ReExamClient() {
                         { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
                       ]}
                     />
-                  </Td>
-                  <Td>{(page - 1) * PAGE_SIZE + i + 1}</Td>
-                  <Td className="font-medium">{r.customerName}</Td>
+                  </td>
+                  <td className={`sticky left-[64px] z-10 w-[56px] min-w-[56px] px-3 py-3 align-middle ${sbg}`}>
+                    {(page - 1) * PAGE_SIZE + i + 1}
+                  </td>
+                  <td className={`sticky left-[120px] z-10 w-[170px] min-w-[170px] border-r border-gray-200 px-3 py-3 align-middle font-medium ${sbg}`}>
+                    {r.customerName}
+                  </td>
                   <Td>{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
                   <Td className="font-medium text-brand">{formatDateVN(r.reExamDate)}</Td>
                   <Td className="text-brand">{r.time ?? '-'}</Td>
@@ -340,20 +362,25 @@ function ReExamClient() {
                     </span>
                   </Td>
                   <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
-                    <ExpandableCell
-                      text={r.service}
-                      expanded={!!expandedRows[r._id]}
-                      onToggle={() =>
-                        setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] }))
-                      }
-                    />
+                    <ExpandableCell text={r.service} expanded={exp} onToggle={toggle} />
                   </td>
                   <Td>{formatDateVN(r.surgeryDate)}</Td>
                   <Td>{r.media ?? '-'}</Td>
                   <Td>{r.doctor ?? '-'}</Td>
                   <Td>{r.sale1 ?? '-'}</Td>
+                  <td className="min-w-[180px] max-w-xs px-3 py-3 align-top">
+                    <ExpandableCell text={r.preExamCondition} expanded={exp} onToggle={toggle} />
+                  </td>
+                  <td className="min-w-[180px] max-w-xs px-3 py-3 align-top">
+                    <ExpandableCell text={r.doctorInstruction} expanded={exp} onToggle={toggle} />
+                  </td>
+                  <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
+                    <ExpandableCell text={r.note} expanded={exp} onToggle={toggle} />
+                  </td>
+                  <Td>{formatDateVN(r.createdAt)}</Td>
                 </tr>
-              ))
+                )
+              })
             }
           </tbody>
         </table>
