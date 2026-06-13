@@ -421,7 +421,7 @@ function ReExamClient() {
                   <td className="min-w-[180px] max-w-xs px-3 py-3 text-center align-middle">
                     <ExpandableCell text={r.doctorInstruction} expanded={exp} onToggle={toggle} center />
                   </td>
-                  <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
+                  <td className="min-w-[160px] max-w-xs px-3 py-3 text-left align-middle">
                     <ExpandableCell text={r.note} expanded={exp} onToggle={toggle} />
                   </td>
                   <Td>{formatDateVN(r.createdAt)}</Td>
