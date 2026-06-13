@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: String,
     name: String,
     role: String,
+    status: String,
   },
   { timestamps: true }
 )
@@ -259,6 +260,7 @@ async function main() {
       passwordHash: await bcrypt.hash(u.password, 10),
       name: u.name,
       role: u.role,
+      status: 'active',
     })
   }
   console.log(`✅ Đã tạo ${users.length} tài khoản`)

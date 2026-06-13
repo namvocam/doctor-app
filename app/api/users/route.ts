@@ -13,13 +13,14 @@ export async function GET() {
   if (me.role !== 'admin') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 })
 
   await connectToDatabase()
-  const users = await UserModel.find({}, 'username name role createdAt').sort({ createdAt: -1 }).lean()
+  const users = await UserModel.find({}, 'username name role status createdAt').sort({ createdAt: -1 }).lean()
   return NextResponse.json({
     data: users.map((u) => ({
       _id: String(u._id),
       username: u.username,
       name: u.name,
       role: u.role,
+      status: u.status ?? 'active',
     })),
   })
 }

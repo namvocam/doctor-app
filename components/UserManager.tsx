@@ -1,22 +1,27 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { UserPlus, KeyRound, Loader2, Check, Users } from 'lucide-react'
+import { UserPlus, KeyRound, Loader2, Check, Users, Lock, LockOpen, Trash2 } from 'lucide-react'
 import Modal from '@/components/Modal'
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/permissions'
+import { useCurrentUser } from '@/lib/userContext'
 
 interface UserItem {
   _id: string
   username: string
   name: string
   role: string
+  status: string
 }
 
 export default function UserManager() {
+  const me = useCurrentUser()
   const [users, setUsers] = useState<UserItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [resetUser, setResetUser] = useState<UserItem | null>(null)
+  const [deleteUser, setDeleteUser] = useState<UserItem | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -33,6 +38,20 @@ export default function UserManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
   }, [load])
+
+  async function toggleLock(u: UserItem) {
+    setBusyId(u._id)
+    try {
+      await fetch(`/api/users/${u._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: u.status === 'active' ? 'inactive' : 'active' }),
+      })
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -56,16 +75,20 @@ export default function UserManager() {
               <th className="px-4 py-3">Tên</th>
               <th className="px-4 py-3">Tên đăng nhập</th>
               <th className="px-4 py-3">Vai trò</th>
+              <th className="px-4 py-3">Trạng thái</th>
               <th className="px-4 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="py-10 text-center text-gray-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></td></tr>
+              <tr><td colSpan={6} className="py-10 text-center text-gray-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={5} className="py-10 text-center text-gray-400">Chưa có tài khoản.</td></tr>
+              <tr><td colSpan={6} className="py-10 text-center text-gray-400">Chưa có tài khoản.</td></tr>
             ) : (
-              users.map((u, i) => (
+              users.map((u, i) => {
+                const isSelf = u._id === me.userId
+                const active = u.status === 'active'
+                return (
                 <tr key={u._id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3">{i + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">{u.name}</td>
@@ -75,16 +98,45 @@ export default function UserManager() {
                       {ROLE_LABELS[u.role] ?? u.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setResetUser(u)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      <KeyRound className="h-3.5 w-3.5" /> Đặt lại mật khẩu
-                    </button>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                      {active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => setResetUser(u)}
+                        title="Đặt lại mật khẩu"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" /> Mật khẩu
+                      </button>
+                      {!isSelf && (
+                        <>
+                          <button
+                            onClick={() => toggleLock(u)}
+                            disabled={busyId === u._id}
+                            title={active ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-50 ${active ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
+                          >
+                            {busyId === u._id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : active ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
+                            {active ? 'Khóa' : 'Mở khóa'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteUser(u)}
+                            title="Xóa tài khoản"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Xóa
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>
@@ -92,6 +144,7 @@ export default function UserManager() {
 
       <CreateUserModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={load} />
       <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
+      <DeleteUserModal user={deleteUser} onClose={() => setDeleteUser(null)} onDeleted={load} />
     </div>
   )
 }
@@ -223,6 +276,54 @@ function ResetPasswordModal({ user, onClose }: { user: UserItem | null; onClose:
           <input type="text" className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tối thiểu 4 ký tự" />
         </Field>
       )}
+    </Modal>
+  )
+}
+
+function DeleteUserModal({ user, onClose, onDeleted }: { user: UserItem | null; onClose: () => void; onDeleted: () => void }) {
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  async function confirm() {
+    if (!user) return
+    setDeleting(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/users/${user._id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = await res.json()
+        setError(j.error ?? 'Xóa thất bại')
+        return
+      }
+      onDeleted()
+      onClose()
+    } catch {
+      setError('Không thể kết nối máy chủ')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={!!user}
+      title="Xóa tài khoản"
+      onClose={onClose}
+      size="sm"
+      footer={
+        <>
+          {error && <span className="mr-auto self-center text-sm text-red-600">{error}</span>}
+          <button onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Huỷ</button>
+          <button onClick={confirm} disabled={deleting} className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60">
+            {deleting && <Loader2 className="h-4 w-4 animate-spin" />} Xóa
+          </button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-600">
+        Bạn có chắc chắn muốn xóa tài khoản{' '}
+        <span className="font-semibold text-gray-900">{user?.name}</span> ({user?.username})? Hành động này không thể hoàn tác.
+      </p>
     </Modal>
   )
 }

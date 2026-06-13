@@ -27,6 +27,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (user.status === 'inactive') {
+      return NextResponse.json(
+        { error: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.' },
+        { status: 403 }
+      )
+    }
+
     const token = await signSession({
       userId: String(user._id),
       username: user.username,
