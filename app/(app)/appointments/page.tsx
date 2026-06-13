@@ -376,7 +376,7 @@ function AppointmentsClient() {
   }
 
   const title = useMemo(
-    () => (view === 'today' ? 'Lịch hẹn hôm nay (theo tháng)' : 'Lịch hẹn'),
+    () => (view === 'today' ? 'Danh sách Lịch hẹn theo ngày' : 'Lịch hẹn'),
     [view]
   )
 
