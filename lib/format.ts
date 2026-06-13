@@ -37,6 +37,12 @@ export function formatNumber(n: number): string {
   return n.toLocaleString('vi-VN')
 }
 
+/** "15.000.000 ₫" */
+export function formatCurrency(n?: number | null): string {
+  if (!n) return '-'
+  return n.toLocaleString('vi-VN') + ' ₫'
+}
+
 /** Che số điện thoại: "0901234567" -> "*****34567" (giữ 5 số cuối) */
 export function maskPhone(phone?: string | null): string {
   if (!phone) return '-'

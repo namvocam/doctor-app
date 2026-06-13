@@ -12,7 +12,13 @@ import {
   MoreVertical,
   Loader2,
 } from 'lucide-react'
-import { formatDateTimeVN, formatNumber, maskPhone } from '@/lib/format'
+import {
+  formatDateTimeVN,
+  formatDateVN,
+  formatNumber,
+  formatCurrency,
+  maskPhone,
+} from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 
 interface Appointment {
@@ -29,6 +35,21 @@ interface Appointment {
   service2?: string
   test?: boolean
   telesaleNote?: string
+  source?: string
+  subSource?: string
+  groupSource?: string
+  telesale?: string
+  telesaleCtv?: string
+  sale1?: string
+  sale2?: string
+  result?: string
+  saleNote?: string
+  media?: string
+  mktNote?: string
+  dataReceivedAt?: string
+  createdAt?: string
+  recording?: string
+  revenue?: number
   highlight?: boolean
 }
 
@@ -99,7 +120,11 @@ function AppointmentsClient() {
   function handleExport() {
     const headers = [
       'STT', 'Tên KH', 'Ngày giờ thực hiện', 'Bác sĩ', 'Phẫu thuật',
-      'Số ĐT', 'Địa chỉ', 'Dịch vụ 1', 'Dịch vụ 2', 'Xét nghiệm', 'Ghi chú',
+      'Số ĐT/Hộ chiếu', 'Địa chỉ', 'Dịch vụ 1', 'Dịch vụ 2', 'Xét nghiệm',
+      'Ghi chú của Telesale', 'Nguồn', 'Nguồn phụ', 'Nguồn gr tiếp cận sau',
+      'Telesale', 'Telesale CTV', 'Sale 1', 'Sale 2', 'Kết quả',
+      'Ghi chú của sale', 'Media', 'Ghi chú của MKT', 'Ngày nhận data',
+      'Ngày tạo lịch', 'Ghi âm', 'Doanh Thu',
     ]
     const data = rows.map((r, i) => [
       i + 1,
@@ -113,6 +138,21 @@ function AppointmentsClient() {
       r.service2 ?? '',
       r.test ? 'Có' : 'Không',
       r.telesaleNote ?? '',
+      r.source ?? '',
+      r.subSource ?? '',
+      r.groupSource ?? '',
+      r.telesale ?? '',
+      r.telesaleCtv ?? '',
+      r.sale1 ?? '',
+      r.sale2 ?? '',
+      r.result ?? '',
+      r.saleNote ?? '',
+      r.media ?? '',
+      r.mktNote ?? '',
+      formatDateVN(r.dataReceivedAt),
+      formatDateVN(r.createdAt),
+      r.recording ?? '',
+      r.revenue ? String(r.revenue) : '0',
     ])
     exportCSV('lich-hen.csv', headers, data)
   }
@@ -233,7 +273,7 @@ function AppointmentsClient() {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin">
-        <table className="min-w-[1100px] w-full text-sm">
+        <table className="min-w-[2600px] w-full text-sm">
           <thead>
             <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
               <Th>Thao tác</Th>
@@ -247,19 +287,34 @@ function AppointmentsClient() {
               <Th>Dịch vụ 1</Th>
               <Th>Dịch vụ 2</Th>
               <Th>Xét nghiệm</Th>
-              <Th>Ghi chú của telesale</Th>
+              <Th>Ghi chú của Telesale</Th>
+              <Th>Nguồn</Th>
+              <Th>Nguồn phụ</Th>
+              <Th>Nguồn gr tiếp cận sau</Th>
+              <Th>Telesale</Th>
+              <Th>Telesale CTV</Th>
+              <Th>Sale 1</Th>
+              <Th>Sale 2</Th>
+              <Th>Kết quả</Th>
+              <Th>Ghi chú của sale</Th>
+              <Th>Media</Th>
+              <Th>Ghi chú của MKT</Th>
+              <Th>Ngày nhận data</Th>
+              <Th>Ngày tạo lịch</Th>
+              <Th>Ghi âm</Th>
+              <Th>Doanh Thu</Th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={12} className="py-12 text-center text-gray-400">
+                <td colSpan={27} className="py-12 text-center text-gray-400">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="py-12 text-center text-gray-400">
+                <td colSpan={27} className="py-12 text-center text-gray-400">
                   Không có lịch hẹn nào.
                 </td>
               </tr>
@@ -281,16 +336,43 @@ function AppointmentsClient() {
                     {r.customerName}
                     {r.age ? ` / ${r.age} tuổi` : ''}
                   </Td>
-                  <Td>{formatDateTimeVN(r.performAt)}</Td>
-                  <Td>{r.doctor ?? '-'}</Td>
+                  <Td className="whitespace-nowrap">{formatDateTimeVN(r.performAt)}</Td>
+                  <Td className="whitespace-nowrap">{r.doctor ?? '-'}</Td>
                   <Td className="text-center">{r.surgery ? <Check className="mx-auto h-4 w-4" /> : '-'}</Td>
-                  <Td>{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
+                  <Td className="whitespace-nowrap">{maskPhones ? maskPhone(r.phone) : r.phone ?? '-'}</Td>
                   <Td>{r.address ?? '-'}</Td>
                   <Td>{r.service1 ?? '-'}</Td>
                   <Td>{r.service2 || '-'}</Td>
                   <Td className="text-center">{r.test ? <Check className="mx-auto h-4 w-4" /> : '-'}</Td>
-                  <Td className="max-w-xs">
+                  <Td className="min-w-[200px] max-w-xs">
                     <span className="line-clamp-2">{r.telesaleNote ?? '-'}</span>
+                  </Td>
+                  <Td>{r.source ?? '-'}</Td>
+                  <Td>{r.subSource || '-'}</Td>
+                  <Td>{r.groupSource || '-'}</Td>
+                  <Td className="whitespace-nowrap">{r.telesale || '-'}</Td>
+                  <Td className="whitespace-nowrap">{r.telesaleCtv || '-'}</Td>
+                  <Td className="whitespace-nowrap">{r.sale1 || '-'}</Td>
+                  <Td className="whitespace-nowrap">{r.sale2 || '-'}</Td>
+                  <Td>{r.result ?? '-'}</Td>
+                  <Td className="min-w-[180px] max-w-xs">
+                    <span className="line-clamp-2">{r.saleNote || '-'}</span>
+                  </Td>
+                  <Td>{r.media || '-'}</Td>
+                  <Td className="min-w-[180px] max-w-xs">
+                    <span className="line-clamp-2">{r.mktNote || '-'}</span>
+                  </Td>
+                  <Td className="whitespace-nowrap">{formatDateVN(r.dataReceivedAt)}</Td>
+                  <Td className="whitespace-nowrap">{formatDateVN(r.createdAt)}</Td>
+                  <Td>
+                    {r.recording ? (
+                      <audio controls src={r.recording} className="h-8 w-40" />
+                    ) : (
+                      '-'
+                    )}
+                  </Td>
+                  <Td className={`whitespace-nowrap font-semibold ${r.highlight ? 'text-white' : 'text-green-600'}`}>
+                    {formatCurrency(r.revenue)}
                   </Td>
                 </tr>
               ))
