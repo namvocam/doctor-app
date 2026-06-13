@@ -25,6 +25,7 @@ import {
 } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
+import DayPagination from '@/components/DayPagination'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 
 const PAGE_SIZE = 14
@@ -169,6 +170,11 @@ function daysInMonth(month: string): number {
   return new Date(y, m, 0).getDate()
 }
 
+/** Ngày mặc định khi mở tháng: hôm nay nếu là tháng hiện tại, ngược lại là ngày 1. */
+function defaultDayFor(month: string): number {
+  return month === currentMonth() ? new Date().getDate() : 1
+}
+
 function AppointmentsClient() {
   const searchParams = useSearchParams()
   const view = searchParams.get('view') ?? ''
@@ -265,37 +271,41 @@ function AppointmentsClient() {
   // Tải lại khi đổi view (từ sidebar)
   useEffect(() => {
     const m = currentMonth()
+    const initialPage = isToday ? defaultDayFor(m) : 1
     /* eslint-disable react-hooks/set-state-in-effect */
     setMonth(m)
-    setPage(1)
-    fetchData(filters, 1, m)
+    setPage(initialPage)
+    fetchData(filters, initialPage, m)
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    setPage(1)
-    fetchData(filters, 1, month)
+    const p = isToday ? page : 1 // chế độ theo tháng: giữ nguyên ngày đang chọn
+    setPage(p)
+    fetchData(filters, p, month)
   }
   function handleReset() {
     const cleared = {
       q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
     }
     const m = currentMonth()
+    const day = isToday ? defaultDayFor(m) : 1
     setFilters(cleared)
     setMonth(m)
-    setPage(1)
-    fetchData(cleared, 1, m)
+    setPage(day)
+    fetchData(cleared, day, m)
   }
   function handlePageChange(p: number) {
     setPage(p)
     fetchData(filters, p, month)
   }
   function handleMonthChange(m: string) {
+    const day = defaultDayFor(m)
     setMonth(m)
-    setPage(1)
-    fetchData(filters, 1, m)
+    setPage(day)
+    fetchData(filters, day, m)
   }
 
   function handleExport() {
@@ -599,14 +609,7 @@ function AppointmentsClient() {
 
         {/* Pagination */}
         {!loading && isToday && (
-          <Pagination
-            page={page}
-            pageSize={1}
-            total={daysInMonth(month)}
-            unit="ngày"
-            summary={`Tháng ${month.split('-').reverse().join('/')} — chọn ngày (trang = ngày)`}
-            onPageChange={handlePageChange}
-          />
+          <DayPagination days={daysInMonth(month)} current={page} onChange={handlePageChange} />
         )}
         {!loading && !isToday && total > 0 && (
           <Pagination
