@@ -5,6 +5,35 @@ import { getCurrentUser } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
+// Lấy một danh mục theo type (dùng cho tab lazy-load) - mọi user đã đăng nhập.
+export async function GET(
+  _request: NextRequest,
+  ctx: { params: Promise<{ type: string }> }
+) {
+  try {
+    if (!(await getCurrentUser())) {
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+    const { type } = await ctx.params
+    if (!CATEGORY_TYPES.includes(type as CategoryType)) {
+      return NextResponse.json({ error: 'Loại danh mục không hợp lệ' }, { status: 400 })
+    }
+
+    await connectToDatabase()
+    const category = await CategoryModel.findOne({ type }).lean()
+    return NextResponse.json({
+      data: {
+        type,
+        label: CATEGORY_LABELS[type as CategoryType],
+        options: category?.options ?? [],
+      },
+    })
+  } catch (error) {
+    console.error('GET /api/categories/[type] error:', error)
+    return NextResponse.json({ error: 'Không thể tải danh mục' }, { status: 500 })
+  }
+}
+
 // Cập nhật danh sách option của một danh mục - chỉ admin.
 export async function PUT(
   request: NextRequest,
