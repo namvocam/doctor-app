@@ -18,6 +18,7 @@ import {
 import { formatDateVN, formatNumber, maskPhone } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
+import EmptyState from '@/components/EmptyState'
 
 const PAGE_SIZE = 14
 
@@ -276,6 +277,13 @@ function ReExamClient() {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin">
+        {loading ? (
+          <div className="flex justify-center py-16 text-gray-400">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : rows.length === 0 ? (
+          <EmptyState />
+        ) : (
         <table className="min-w-[1100px] w-full text-sm">
           <thead>
             <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
@@ -285,11 +293,7 @@ function ReExamClient() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={12} className="py-12 text-center text-gray-400"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan={12} className="py-12 text-center text-gray-400">Không có lịch tái khám nào.</td></tr>
-            ) : (
+            {
               rows.map((r, i) => (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
                   <Td><button className="text-gray-400"><MoreVertical className="h-4 w-4" /></button></Td>
@@ -318,9 +322,10 @@ function ReExamClient() {
                   <Td>{r.sale1 ?? '-'}</Td>
                 </tr>
               ))
-            )}
+            }
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Pagination */}

@@ -36,6 +36,7 @@ import {
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
 import DayPagination from '@/components/DayPagination'
+import EmptyState from '@/components/EmptyState'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 
 const PAGE_SIZE = 14
@@ -380,7 +381,6 @@ function AppointmentsClient() {
     [view]
   )
 
-  const colCount = visibleColumns.length + 2 // + Thao tác + STT
   // Đếm số trường bộ lọc đang có giá trị; chế độ "theo tháng" tính thêm ô "Tháng thực hiện"
   const activeFilterCount =
     Object.values(filters).filter((v) => v).length + (isToday ? 1 : 0)
@@ -632,33 +632,27 @@ function AppointmentsClient() {
             fullscreen ? 'flex-1' : ''
           }`}
         >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
-                <Th>Thao tác</Th>
-                <Th>STT</Th>
-                {visibleColumns.map((c) => (
-                  <Th key={c.key} className={c.thClass}>
-                    {c.label}
-                  </Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={colCount} className="py-12 text-center text-gray-400">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </td>
+          {loading ? (
+            <div className="flex justify-center py-16 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : rows.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-brand-navy text-left text-xs font-semibold uppercase text-white">
+                  <Th>Thao tác</Th>
+                  <Th>STT</Th>
+                  {visibleColumns.map((c) => (
+                    <Th key={c.key} className={c.thClass}>
+                      {c.label}
+                    </Th>
+                  ))}
                 </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={colCount} className="py-12 text-center text-gray-400">
-                    Không có lịch hẹn nào.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r, i) => {
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
                   const ctx: ColumnCtx = {
                     maskPhones,
                     expanded: !!expandedRows[r._id],
@@ -685,10 +679,10 @@ function AppointmentsClient() {
                       ))}
                     </tr>
                   )
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
