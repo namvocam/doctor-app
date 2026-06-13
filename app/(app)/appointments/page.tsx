@@ -319,11 +319,18 @@ function AppointmentsClient() {
     setPage(p)
     fetchData(filters, p, month)
   }
+  const EMPTY_FILTERS = {
+    q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
+  }
   function handleReset() {
     // Chỉ xoá các input bộ lọc; KHÔNG gọi API (phải bấm "Tìm kiếm" mới lấy kết quả)
-    setFilters({
-      q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
-    })
+    setFilters(EMPTY_FILTERS)
+  }
+  function handleResetAndSearch() {
+    // Đặt lại bộ lọc và tìm kiếm lại ngay (dùng cho nút trong trạng thái rỗng)
+    setFilters(EMPTY_FILTERS)
+    setPage(1)
+    fetchData(EMPTY_FILTERS, 1, month)
   }
   function handlePageChange(p: number) {
     setPage(p)
@@ -637,7 +644,16 @@ function AppointmentsClient() {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : rows.length === 0 ? (
-            <EmptyState />
+            isToday ? (
+              <EmptyState />
+            ) : (
+              <EmptyState
+                icon={CalendarX2}
+                message="Không tìm thấy lịch hẹn nào"
+                description="Thử điều chỉnh bộ lọc để tìm kiếm kết quả khác"
+                action={{ label: 'Đặt lại bộ lọc', onClick: handleResetAndSearch }}
+              />
+            )
           ) : (
             <table className="w-full text-sm">
               <thead>
