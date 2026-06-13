@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import ReExamModel from '@/models/ReExam'
 import { getCurrentUser } from '@/lib/session'
+import { canEditReExam } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,13 +18,20 @@ export async function PUT(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
     await connectToDatabase()
     const { id } = await ctx.params
-    const body = await request.json()
+    const current = await ReExamModel.findById(id).lean()
+    if (!current) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
+    const isOwner = String((current as { createdBy?: unknown }).createdBy ?? '') === me.userId
+    if (!canEditReExam(me.role, isOwner)) {
+      return NextResponse.json({ error: 'Bạn không có quyền sửa lịch tái khám này' }, { status: 403 })
+    }
 
+    const body = await request.json()
     const update: Record<string, unknown> = {}
     for (const key of ALLOWED_FIELDS) {
       if (!(key in body)) continue
@@ -35,7 +43,6 @@ export async function PUT(
       new: true,
       runValidators: true,
     }).lean()
-    if (!doc) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
     return NextResponse.json({ data: doc })
   } catch (error) {
     console.error('PUT /api/reexams/[id] error:', error)
@@ -48,13 +55,19 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
     await connectToDatabase()
     const { id } = await ctx.params
-    const doc = await ReExamModel.findByIdAndDelete(id).lean()
-    if (!doc) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
+    const current = await ReExamModel.findById(id).lean()
+    if (!current) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
+    const isOwner = String((current as { createdBy?: unknown }).createdBy ?? '') === me.userId
+    if (!canEditReExam(me.role, isOwner)) {
+      return NextResponse.json({ error: 'Bạn không có quyền xoá lịch tái khám này' }, { status: 403 })
+    }
+    await ReExamModel.findByIdAndDelete(id)
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('DELETE /api/reexams/[id] error:', error)

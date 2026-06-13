@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import AppointmentModel from '@/models/Appointment'
 import { getCurrentUser } from '@/lib/session'
+import { canCreateAppointment } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,8 +43,12 @@ const DATE_FIELDS = new Set(['performAt', 'dataReceivedAt'])
 // Tạo mới lịch hẹn
 export async function POST(request: NextRequest) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+    if (!canCreateAppointment(me.role)) {
+      return NextResponse.json({ error: 'Bạn không có quyền tạo lịch hẹn' }, { status: 403 })
     }
     const body = await request.json()
     if (!body.customerName || !body.performAt) {
@@ -60,6 +65,7 @@ export async function POST(request: NextRequest) {
       doc[key] = DATE_FIELDS.has(key) ? (value ? new Date(value) : undefined) : value
     }
 
+    doc.createdBy = me.userId
     await connectToDatabase()
     const created = await AppointmentModel.create(doc)
     return NextResponse.json({ data: created }, { status: 201 })

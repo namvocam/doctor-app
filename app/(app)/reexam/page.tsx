@@ -30,6 +30,8 @@ import CreateReExamModal from '@/components/CreateReExamModal'
 import ActionMenu from '@/components/ActionMenu'
 import ReExamModals, { type ReExamRecord } from '@/components/ReExamModals'
 import { REEXAM_STATUSES, REEXAM_STATUS_STYLE } from '@/lib/reexamStatus'
+import { useCurrentUser } from '@/lib/userContext'
+import { canCreateReExam, canEditReExam } from '@/lib/permissions'
 
 const PAGE_SIZE = 14
 
@@ -49,6 +51,7 @@ interface ReExam {
   doctorInstruction?: string
   note?: string
   createdAt?: string
+  createdBy?: string
 }
 
 function stickyBgFor(status?: string) {
@@ -97,6 +100,7 @@ function ReExamClient() {
   const [editing, setEditing] = useState<ReExamRecord | null>(null)
   const [mediaRec, setMediaRec] = useState<ReExamRecord | null>(null)
   const [deleting, setDeleting] = useState<ReExamRecord | null>(null)
+  const me = useCurrentUser()
   const [rows, setRows] = useState<ReExam[]>([])
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
@@ -213,12 +217,14 @@ function ReExamClient() {
               </span>
             )}
           </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
-          >
-            <Plus className="h-4 w-4" /> Tạo lịch tái khám
-          </button>
+          {canCreateReExam(me.role) && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" /> Tạo lịch tái khám
+            </button>
+          )}
         </div>
       </div>
 
@@ -336,16 +342,21 @@ function ReExamClient() {
                 const toggle = () =>
                   setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] }))
                 const exp = !!expandedRows[r._id]
+                const canEdit = canEditReExam(me.role, !!r.createdBy && r.createdBy === me.userId)
                 return (
                 <tr key={r._id} className={`border-b border-gray-100 ${rowTint(r.status)}`}>
                   <td className={`sticky left-0 z-10 w-[64px] min-w-[64px] px-3 py-3 text-center align-middle ${sbg}`}>
-                    <ActionMenu
-                      items={[
-                        { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
-                        { label: 'Media', icon: Camera, onClick: () => setMediaRec(r) },
-                        { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
-                      ]}
-                    />
+                    {canEdit ? (
+                      <ActionMenu
+                        items={[
+                          { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
+                          { label: 'Media', icon: Camera, onClick: () => setMediaRec(r) },
+                          { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
+                        ]}
+                      />
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className={`sticky left-[64px] z-10 w-[56px] min-w-[56px] px-3 py-3 text-center align-middle ${sbg}`}>
                     {(page - 1) * PAGE_SIZE + i + 1}

@@ -13,6 +13,8 @@ export default async function AppLayout({
   }
 
   return (
-    <AppShell user={{ name: user.name, role: user.role }}>{children}</AppShell>
+    <AppShell user={{ userId: user.userId, name: user.name, role: user.role }}>
+      {children}
+    </AppShell>
   )
 }

@@ -20,6 +20,7 @@ const reExamSchema = new Schema(
     preExamCondition: { type: String }, // Tình trạng trước khám
     doctorInstruction: { type: String }, // Chỉ định của bác sĩ
     note: { type: String }, // Ghi chú
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' }, // Người tạo
   },
   { timestamps: true }
 )

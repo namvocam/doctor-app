@@ -10,6 +10,7 @@ interface Props {
   viewing: Appointment | null
   editing: Appointment | null
   deleting: Appointment | null
+  statusEditing?: Appointment | null
   creating?: boolean
   cats: CategoryMap
   onClose: () => void
@@ -20,6 +21,7 @@ export default function AppointmentModals({
   viewing,
   editing,
   deleting,
+  statusEditing = null,
   creating = false,
   cats,
   onClose,
@@ -31,7 +33,86 @@ export default function AppointmentModals({
       <EditModal appointment={editing} cats={cats} onClose={onClose} onSaved={onChanged} />
       <DeleteModal appointment={deleting} onClose={onClose} onDeleted={onChanged} />
       <CreateModal open={creating} cats={cats} onClose={onClose} onCreated={onChanged} />
+      <StatusModal appointment={statusEditing} cats={cats} onClose={onClose} onSaved={onChanged} />
     </>
+  )
+}
+
+/* ---------------- Đổi trạng thái (chỉ Kết quả) ---------------- */
+function StatusModal({
+  appointment,
+  cats,
+  onClose,
+  onSaved,
+}: {
+  appointment: Appointment | null
+  cats: CategoryMap
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState('')
+  const [initId, setInitId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  if (appointment && appointment._id !== initId) {
+    setInitId(appointment._id)
+    setValue(appointment.result ?? '')
+    setError('')
+  }
+
+  async function save() {
+    if (!appointment) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/appointments/${appointment._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: value }),
+      })
+      if (!res.ok) {
+        const j = await res.json()
+        setError(j.error ?? 'Cập nhật thất bại')
+        return
+      }
+      onSaved()
+      onClose()
+    } catch {
+      setError('Không thể kết nối máy chủ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={!!appointment}
+      title="Đổi trạng thái"
+      onClose={onClose}
+      size="sm"
+      footer={
+        <>
+          {error && <span className="mr-auto self-center text-sm text-red-600">{error}</span>}
+          <button onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Huỷ</button>
+          <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Lưu
+          </button>
+        </>
+      }
+    >
+      <p className="mb-2 text-sm text-gray-600">
+        Khách hàng: <span className="font-semibold text-gray-900">{appointment?.customerName}</span>
+      </p>
+      <label className="mb-1.5 block text-sm font-medium text-gray-700">Kết quả</label>
+      <select className="input" value={value} onChange={(e) => setValue(e.target.value)}>
+        <option value="">-- Chọn --</option>
+        {(cats.result?.options ?? []).map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+        {value && !(cats.result?.options ?? []).includes(value) && <option value={value}>{value}</option>}
+      </select>
+    </Modal>
   )
 }
 

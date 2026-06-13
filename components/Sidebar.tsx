@@ -13,12 +13,15 @@ import {
   CalendarCheck2,
   Stethoscope,
   Settings2,
+  Users,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
+import { visibleLeadReports } from '@/lib/permissions'
 
 interface NavChild {
   label: string
   href: string
+  key?: string
   icon?: React.ComponentType<{ className?: string }>
 }
 
@@ -150,11 +153,11 @@ export default function Sidebar({
           baseHref="/reports/lead-phau"
           onNavigate={onNavigate}
           items={[
-            { label: 'Tất cả', href: '/reports/lead-phau' },
-            { label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv' },
-            { label: 'Lead Tiktok', href: '/reports/lead-phau/tiktok' },
-            { label: 'Lead ADS', href: '/reports/lead-phau/ads' },
-          ]}
+            { key: 'all', label: 'Tất cả', href: '/reports/lead-phau' },
+            { key: 'ctv', label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv' },
+            { key: 'tiktok', label: 'Lead Tiktok', href: '/reports/lead-phau/tiktok' },
+            { key: 'ads', label: 'Lead ADS', href: '/reports/lead-phau/ads' },
+          ].filter((it) => (visibleLeadReports(role) as string[]).includes(it.key))}
         />
 
         <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
@@ -191,6 +194,12 @@ export default function Sidebar({
               href="/admin/categories"
               label="Cấu hình danh mục"
               icon={Settings2}
+              onNavigate={onNavigate}
+            />
+            <NavLink
+              href="/admin/users"
+              label="Quản lý tài khoản"
+              icon={Users}
               onNavigate={onNavigate}
             />
           </>

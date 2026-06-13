@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import AppointmentModel from '@/models/Appointment'
 import { getCurrentUser } from '@/lib/session'
+import { canEditAppointment, canChangeAppointmentStatus } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,29 +39,36 @@ export async function PUT(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
     await connectToDatabase()
     const { id } = await ctx.params
-    const body = await request.json()
+    const current = await AppointmentModel.findById(id).lean()
+    if (!current) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
 
+    const isOwner = String((current as { createdBy?: unknown }).createdBy ?? '') === me.userId
+    const canFull = canEditAppointment(me.role, isOwner)
+    const canStatus = canChangeAppointmentStatus(me.role, isOwner)
+    if (!canFull && !canStatus) {
+      return NextResponse.json({ error: 'Bạn không có quyền sửa lịch hẹn này' }, { status: 403 })
+    }
+
+    const body = await request.json()
     const update: Record<string, unknown> = {}
-    for (const key of ALLOWED_FIELDS) {
+    // Không đủ quyền sửa đầy đủ -> chỉ cho đổi trạng thái (kết quả)
+    const fields = canFull ? ALLOWED_FIELDS : (['result'] as const)
+    for (const key of fields) {
       if (!(key in body)) continue
       const value = body[key]
-      if (DATE_FIELDS.has(key)) {
-        update[key] = value ? new Date(value) : null
-      } else {
-        update[key] = value
-      }
+      update[key] = DATE_FIELDS.has(key) ? (value ? new Date(value) : null) : value
     }
 
     const doc = await AppointmentModel.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
     }).lean()
-    if (!doc) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
     return NextResponse.json({ data: doc })
   } catch (error) {
     console.error('PUT /api/appointments/[id] error:', error)
@@ -73,13 +81,21 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
     }
     await connectToDatabase()
     const { id } = await ctx.params
-    const doc = await AppointmentModel.findByIdAndDelete(id).lean()
-    if (!doc) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
+    const current = await AppointmentModel.findById(id).lean()
+    if (!current) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 })
+
+    const isOwner = String((current as { createdBy?: unknown }).createdBy ?? '') === me.userId
+    if (!canEditAppointment(me.role, isOwner)) {
+      return NextResponse.json({ error: 'Bạn không có quyền xoá lịch hẹn này' }, { status: 403 })
+    }
+
+    await AppointmentModel.findByIdAndDelete(id)
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('DELETE /api/appointments/[id] error:', error)

@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import Topbar from '@/components/Topbar'
+import { UserProvider } from '@/lib/userContext'
 
 interface AppShellProps {
-  user: { name: string; role: string }
+  user: { userId: string; name: string; role: string }
   children: React.ReactNode
 }
 
@@ -13,6 +14,7 @@ export default function AppShell({ user, children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
+   <UserProvider user={user}>
     <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar - desktop */}
       <div className="hidden lg:block">
@@ -37,5 +39,6 @@ export default function AppShell({ user, children }: AppShellProps) {
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
+   </UserProvider>
   )
 }

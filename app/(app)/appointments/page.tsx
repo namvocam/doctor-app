@@ -45,6 +45,13 @@ import AppointmentModals from '@/components/AppointmentModals'
 import ActionMenu from '@/components/ActionMenu'
 import type { Appointment } from '@/lib/appointmentTypes'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
+import { useCurrentUser } from '@/lib/userContext'
+import {
+  canCreateAppointment,
+  canEditAppointment,
+  canChangeAppointmentStatus,
+} from '@/lib/permissions'
+import type { ActionItem } from '@/components/ActionMenu'
 
 const PAGE_SIZE = 14
 
@@ -233,6 +240,8 @@ function AppointmentsClient() {
   const [editing, setEditing] = useState<Appointment | null>(null)
   const [deleting, setDeleting] = useState<Appointment | null>(null)
   const [creating, setCreating] = useState(false)
+  const [statusEditing, setStatusEditing] = useState<Appointment | null>(null)
+  const me = useCurrentUser()
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -443,12 +452,14 @@ function AppointmentsClient() {
               </span>
             )}
           </button>
-          <button
-            onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-dark"
-          >
-            <Plus className="h-4 w-4" /> Tạo mới lịch hẹn
-          </button>
+          {canCreateAppointment(me.role) && (
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-dark"
+            >
+              <Plus className="h-4 w-4" /> Tạo mới lịch hẹn
+            </button>
+          )}
         </div>
       </div>
 
@@ -716,19 +727,21 @@ function AppointmentsClient() {
                   }
                   const bg = rowBg(r)
                   const stickyBg = bg || 'bg-white'
+                  const isOwner = !!r.createdBy && r.createdBy === me.userId
+                  const actions: ActionItem[] = [{ label: 'Xem', icon: Eye, onClick: () => setViewing(r) }]
+                  if (canEditAppointment(me.role, isOwner)) {
+                    actions.push({ label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) })
+                    actions.push({ label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) })
+                  } else if (canChangeAppointmentStatus(me.role, isOwner)) {
+                    actions.push({ label: 'Đổi trạng thái', icon: Pencil, onClick: () => setStatusEditing(r) })
+                  }
                   return (
                     <tr
                       key={r._id}
                       className={`border-b border-gray-100 text-center ${bg || 'hover:bg-gray-50'}`}
                     >
                       <Td className={`sticky left-0 z-10 w-[80px] min-w-[80px] ${stickyBg}`}>
-                        <ActionMenu
-                          items={[
-                            { label: 'Xem', icon: Eye, onClick: () => setViewing(r) },
-                            { label: 'Sửa', icon: Pencil, onClick: () => setEditing(r) },
-                            { label: 'Xoá', icon: Trash2, danger: true, onClick: () => setDeleting(r) },
-                          ]}
-                        />
+                        <ActionMenu items={actions} />
                       </Td>
                       <Td className={`sticky left-[80px] z-10 w-[56px] min-w-[56px] ${stickyBg}`}>
                         {(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}
@@ -772,12 +785,14 @@ function AppointmentsClient() {
         viewing={viewing}
         editing={editing}
         deleting={deleting}
+        statusEditing={statusEditing}
         creating={creating}
         cats={cats}
         onClose={() => {
           setViewing(null)
           setEditing(null)
           setDeleting(null)
+          setStatusEditing(null)
           setCreating(false)
         }}
         onChanged={() => fetchData(filters, page, month)}

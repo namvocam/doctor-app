@@ -32,6 +32,7 @@ export interface ReExamRecord {
   preExamCondition?: string
   doctorInstruction?: string
   note?: string
+  createdBy?: string
 }
 
 interface Props {

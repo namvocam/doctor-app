@@ -246,7 +246,12 @@ async function main() {
   await User.deleteMany({})
   const users = [
     { username: 'bskhanh', password: '123456', name: 'BS. Đinh Khanh', role: 'admin' },
-    { username: 'ads', password: 'ads123', name: 'ADS ads', role: 'ads' },
+    { username: 'ads', password: 'ads123', name: 'Nhân viên ADS', role: 'ads' },
+    { username: 'tiktok', password: 'tiktok123', name: 'Nhân viên Tiktok', role: 'tiktok' },
+    { username: 'ctv', password: 'ctv123', name: 'Quản lý CTV', role: 'manager-collaborator' },
+    { username: 'telesale', password: 'tele123', name: 'Tele-sale', role: 'tele-sale' },
+    { username: 'sale', password: 'sale123', name: 'Nhân viên Sale', role: 'sale' },
+    { username: 'yta', password: 'yta123', name: 'Y tá', role: 'nurse' },
   ]
   for (const u of users) {
     await User.create({

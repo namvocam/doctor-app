@@ -31,6 +31,7 @@ const appointmentSchema = new Schema(
     revenue: { type: Number, default: 0 }, // Doanh thu
     // Tô màu cam cho dòng cần chú ý (ví dụ: đã chốt phẫu thuật)
     highlight: { type: Boolean, default: false },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' }, // Người tạo
   },
   { timestamps: true }
 )

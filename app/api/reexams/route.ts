@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import ReExamModel from '@/models/ReExam'
 import { getCurrentUser } from '@/lib/session'
+import { canCreateReExam } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +20,12 @@ function endOfToday() {
 // Tạo lịch tái khám mới
 export async function POST(request: NextRequest) {
   try {
-    if (!(await getCurrentUser())) {
+    const me = await getCurrentUser()
+    if (!me) {
       return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+    if (!canCreateReExam(me.role)) {
+      return NextResponse.json({ error: 'Bạn không có quyền tạo lịch tái khám' }, { status: 403 })
     }
     const body = await request.json()
     if (!body.customerName || !body.reExamDate) {
@@ -45,6 +50,7 @@ export async function POST(request: NextRequest) {
       preExamCondition: body.preExamCondition,
       doctorInstruction: body.doctorInstruction,
       note: body.note,
+      createdBy: me.userId,
     })
     return NextResponse.json({ data: reexam }, { status: 201 })
   } catch (error) {

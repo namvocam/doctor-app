@@ -30,6 +30,7 @@ export interface Appointment {
   recording?: string
   revenue?: number
   highlight?: boolean
+  createdBy?: string
 }
 
 export type CategoryMap = Record<string, { label: string; options: string[] }>
