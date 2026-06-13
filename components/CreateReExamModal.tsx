@@ -67,6 +67,7 @@ export default function CreateReExamModal({
   const [q, setQ] = useState('')
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [searched, setSearched] = useState(false)
   // Step 2
   const [surgeries, setSurgeries] = useState<Surgery[]>([])
   const [loadingSurgeries, setLoadingSurgeries] = useState(false)
@@ -101,6 +102,8 @@ export default function CreateReExamModal({
     setCustomer(null)
     setSurgery(null)
     setQ('')
+    setCustomers([])
+    setSearched(false)
     setForm({
       reExamDate: defaultReExamDate(),
       time: '09:00',
@@ -111,8 +114,14 @@ export default function CreateReExamModal({
     })
     setError('')
     /* eslint-enable react-hooks/set-state-in-effect */
-    searchCustomers('')
-  }, [open, searchCustomers])
+  }, [open])
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!q.trim()) return // chưa nhập gì thì không tìm
+    setSearched(true)
+    searchCustomers(q.trim())
+  }
 
   async function selectCustomer(c: Customer) {
     setCustomer(c)
@@ -202,13 +211,7 @@ export default function CreateReExamModal({
                 <Search className="h-4 w-4" /> Tìm kiếm khách hàng{' '}
                 <span className="font-normal text-gray-400">(Nhập tên hoặc số điện thoại)</span>
               </label>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  searchCustomers(q)
-                }}
-                className="flex gap-2"
-              >
+              <form onSubmit={handleSearch} className="flex gap-2">
                 <input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -223,18 +226,20 @@ export default function CreateReExamModal({
                 </button>
               </form>
 
-              <h3 className="mb-2 mt-5 flex items-center gap-2 font-semibold text-gray-800">
-                <User className="h-5 w-5" /> Kết quả tìm kiếm
-              </h3>
-              {loadingCustomers ? (
-                <div className="flex justify-center py-8 text-gray-400">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : customers.length === 0 ? (
-                <p className="py-6 text-center text-sm text-gray-400">Không tìm thấy khách hàng.</p>
-              ) : (
-                <div className="space-y-2">
-                  {customers.map((c) => (
+              {searched && (
+                <>
+                  <h3 className="mb-2 mt-5 flex items-center gap-2 font-semibold text-gray-800">
+                    <User className="h-5 w-5" /> Kết quả tìm kiếm
+                  </h3>
+                  {loadingCustomers ? (
+                    <div className="flex justify-center py-8 text-gray-400">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : customers.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-gray-400">Không tìm thấy khách hàng.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {customers.map((c) => (
                     <button
                       key={c.phone}
                       onClick={() => selectCustomer(c)}
@@ -255,7 +260,9 @@ export default function CreateReExamModal({
                       </p>
                     </button>
                   ))}
-                </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
