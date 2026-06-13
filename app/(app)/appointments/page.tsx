@@ -156,9 +156,23 @@ function defaultVisible(): Record<string, boolean> {
   return Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
 }
 
+/** Tháng hiện tại dạng "YYYY-MM" cho input type=month. */
+function currentMonth(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Số ngày trong tháng "YYYY-MM". */
+function daysInMonth(month: string): number {
+  const [y, m] = month.split('-').map(Number)
+  if (!y || !m) return 31
+  return new Date(y, m, 0).getDate()
+}
+
 function AppointmentsClient() {
   const searchParams = useSearchParams()
   const view = searchParams.get('view') ?? ''
+  const isToday = view === 'today' // chế độ "Hôm nay (theo tháng)": phân trang theo ngày
 
   const [filters, setFilters] = useState({
     q: '',
@@ -171,6 +185,7 @@ function AppointmentsClient() {
     from: '',
     to: '',
   })
+  const [month, setMonth] = useState(currentMonth) // YYYY-MM, dùng cho chế độ "theo tháng"
   const [showFilter, setShowFilter] = useState(true)
   const [maskPhones, setMaskPhones] = useState(false)
   const [rows, setRows] = useState<Appointment[]>([])
@@ -204,9 +219,8 @@ function AppointmentsClient() {
   const visibleColumns = useMemo(() => COLUMNS.filter((c) => visible[c.key]), [visible])
 
   const buildQuery = useCallback(
-    (f: typeof filters, pageArg: number) => {
+    (f: typeof filters, pageArg: number, monthArg: string) => {
       const p = new URLSearchParams()
-      if (view) p.set('view', view)
       if (f.q) p.set('q', f.q)
       if (f.age) p.set('age', f.age)
       if (f.province) p.set('province', f.province)
@@ -214,20 +228,30 @@ function AppointmentsClient() {
       if (f.quote) p.set('quote', f.quote)
       if (f.source) p.set('source', f.source)
       if (f.result) p.set('result', f.result)
-      if (f.from) p.set('from', f.from)
-      if (f.to) p.set('to', f.to)
-      p.set('page', String(pageArg))
-      p.set('limit', String(PAGE_SIZE))
+
+      if (isToday) {
+        // pageArg = ngày trong tháng; lấy toàn bộ lịch hẹn của riêng ngày đó
+        const [y, mo] = monthArg.split('-').map(Number)
+        p.set('from', new Date(y, mo - 1, pageArg, 0, 0, 0, 0).toISOString())
+        p.set('to', new Date(y, mo - 1, pageArg, 23, 59, 59, 999).toISOString())
+        p.set('page', '1')
+        p.set('limit', '200')
+      } else {
+        if (f.from) p.set('from', new Date(`${f.from}T00:00:00`).toISOString())
+        if (f.to) p.set('to', new Date(`${f.to}T23:59:59.999`).toISOString())
+        p.set('page', String(pageArg))
+        p.set('limit', String(PAGE_SIZE))
+      }
       return p.toString()
     },
-    [view]
+    [isToday]
   )
 
   const fetchData = useCallback(
-    async (f: typeof filters, pageArg: number) => {
+    async (f: typeof filters, pageArg: number, monthArg: string) => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/appointments?${buildQuery(f, pageArg)}`)
+        const res = await fetch(`/api/appointments?${buildQuery(f, pageArg, monthArg)}`)
         const json = await res.json()
         setRows(json.data ?? [])
         setTotal(json.total ?? 0)
@@ -240,9 +264,11 @@ function AppointmentsClient() {
 
   // Tải lại khi đổi view (từ sidebar)
   useEffect(() => {
+    const m = currentMonth()
     /* eslint-disable react-hooks/set-state-in-effect */
+    setMonth(m)
     setPage(1)
-    fetchData(filters, 1)
+    fetchData(filters, 1, m)
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
@@ -250,19 +276,26 @@ function AppointmentsClient() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     setPage(1)
-    fetchData(filters, 1)
+    fetchData(filters, 1, month)
   }
   function handleReset() {
     const cleared = {
       q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
     }
+    const m = currentMonth()
     setFilters(cleared)
+    setMonth(m)
     setPage(1)
-    fetchData(cleared, 1)
+    fetchData(cleared, 1, m)
   }
   function handlePageChange(p: number) {
     setPage(p)
-    fetchData(filters, p)
+    fetchData(filters, p, month)
+  }
+  function handleMonthChange(m: string) {
+    setMonth(m)
+    setPage(1)
+    fetchData(filters, 1, m)
   }
 
   function handleExport() {
@@ -361,22 +394,35 @@ function AppointmentsClient() {
             <Field label={CATEGORY_LABELS.result}>
               <CatSelect type="result" value={filters.result} cats={cats} onChange={(v) => setFilters({ ...filters, result: v })} />
             </Field>
-            <Field label="Từ ngày">
-              <input
-                type="date"
-                value={filters.from}
-                onChange={(e) => setFilters({ ...filters, from: e.target.value })}
-                className="input"
-              />
-            </Field>
-            <Field label="Đến ngày">
-              <input
-                type="date"
-                value={filters.to}
-                onChange={(e) => setFilters({ ...filters, to: e.target.value })}
-                className="input"
-              />
-            </Field>
+            {isToday ? (
+              <Field label="Tháng thực hiện">
+                <input
+                  type="month"
+                  value={month}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                  className="input"
+                />
+              </Field>
+            ) : (
+              <>
+                <Field label="Từ ngày">
+                  <input
+                    type="date"
+                    value={filters.from}
+                    onChange={(e) => setFilters({ ...filters, from: e.target.value })}
+                    className="input"
+                  />
+                </Field>
+                <Field label="Đến ngày">
+                  <input
+                    type="date"
+                    value={filters.to}
+                    onChange={(e) => setFilters({ ...filters, to: e.target.value })}
+                    className="input"
+                  />
+                </Field>
+              </>
+            )}
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <button
@@ -407,6 +453,15 @@ function AppointmentsClient() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-gray-600">
+            {isToday && (
+              <>
+                Ngày{' '}
+                <span className="font-bold text-gray-900">
+                  {String(page).padStart(2, '0')}/{month.split('-').reverse().join('/')}
+                </span>{' '}
+                —{' '}
+              </>
+            )}
             Đã tìm thấy <span className="font-bold text-gray-900">{formatNumber(total)}</span> lịch hẹn.
           </p>
           <div className="flex items-center gap-2">
@@ -529,7 +584,7 @@ function AppointmentsClient() {
                         <MoreVertical className="h-4 w-4" />
                       </button>
                     </Td>
-                    <Td>{(page - 1) * PAGE_SIZE + i + 1}</Td>
+                    <Td>{(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}</Td>
                     {visibleColumns.map((c) => (
                       <Td key={c.key} className={c.tdClass}>
                         {c.render(r, ctx)}
@@ -543,7 +598,17 @@ function AppointmentsClient() {
         </div>
 
         {/* Pagination */}
-        {!loading && total > 0 && (
+        {!loading && isToday && (
+          <Pagination
+            page={page}
+            pageSize={1}
+            total={daysInMonth(month)}
+            unit="ngày"
+            summary={`Tháng ${month.split('-').reverse().join('/')} — chọn ngày (trang = ngày)`}
+            onPageChange={handlePageChange}
+          />
+        )}
+        {!loading && !isToday && total > 0 && (
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}

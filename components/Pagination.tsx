@@ -8,6 +8,8 @@ interface PaginationProps {
   pageSize: number
   total: number
   unit?: string
+  /** Nếu có, thay thế dòng "Hiển thị X - Y trong tổng số Z" bên trái. */
+  summary?: string
   onPageChange: (page: number) => void
 }
 
@@ -47,6 +49,7 @@ export default function Pagination({
   pageSize,
   total,
   unit = 'kết quả',
+  summary,
   onPageChange,
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -56,11 +59,15 @@ export default function Pagination({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-1">
-      <p className="text-sm text-gray-600">
-        Hiển thị <span className="font-semibold text-gray-900">{from}</span> -{' '}
-        <span className="font-semibold text-gray-900">{to}</span> trong tổng số{' '}
-        <span className="font-semibold text-gray-900">{formatNumber(total)}</span> {unit}
-      </p>
+      {summary ? (
+        <p className="text-sm text-gray-600">{summary}</p>
+      ) : (
+        <p className="text-sm text-gray-600">
+          Hiển thị <span className="font-semibold text-gray-900">{from}</span> -{' '}
+          <span className="font-semibold text-gray-900">{to}</span> trong tổng số{' '}
+          <span className="font-semibold text-gray-900">{formatNumber(total)}</span> {unit}
+        </p>
+      )}
 
       <div className="flex items-center gap-1">
         <button
