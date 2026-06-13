@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import {
   CalendarClock,
@@ -236,7 +237,23 @@ function AppointmentsClient() {
   const [visible, setVisible] = useState<Record<string, boolean>>(defaultVisible)
   const [showCols, setShowCols] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const colRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
+  // Khoá cuộn nền khi fullscreen
+  useEffect(() => {
+    if (!fullscreen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [fullscreen])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -502,14 +519,16 @@ function AppointmentsClient() {
         </form>
       )}
 
-      {/* Vùng kết quả (có thể fullscreen) */}
-      <div
-        className={
-          fullscreen
-            ? 'fixed inset-0 z-50 flex flex-col gap-3 overflow-hidden bg-gray-100 p-4'
-            : 'space-y-4'
-        }
-      >
+      {/* Vùng kết quả (fullscreen portal ra body để chạy đúng trên mobile) */}
+      {(() => {
+        const node = (
+          <div
+            className={
+              fullscreen
+                ? 'fixed inset-0 z-[70] flex flex-col gap-3 overflow-auto bg-gray-100 p-4'
+                : 'space-y-4'
+            }
+          >
         {/* Box thống kê theo kết quả của ngày đang chọn (chế độ "theo tháng") */}
         {isToday && !loading && (
           <div className="flex flex-wrap gap-3">
@@ -730,7 +749,10 @@ function AppointmentsClient() {
             onPageChange={handlePageChange}
           />
         )}
-      </div>
+          </div>
+        )
+        return fullscreen && mounted ? createPortal(node, document.body) : node
+      })()}
 
       <AppointmentModals
         viewing={viewing}
