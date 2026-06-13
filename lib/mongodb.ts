@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { MONGODB_URI } from '@/lib/config'
 
 /**
  * Cache lại kết nối trên `global` để tránh tạo nhiều kết nối khi
@@ -23,13 +24,6 @@ if (!global._mongoose) {
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (cached.conn) {
     return cached.conn
-  }
-
-  const MONGODB_URI = process.env.MONGODB_URI
-  if (!MONGODB_URI) {
-    throw new Error(
-      'Vui lòng định nghĩa biến môi trường MONGODB_URI trong file .env.local'
-    )
   }
 
   if (!cached.promise) {

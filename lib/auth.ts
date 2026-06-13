@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
+import { SESSION_SECRET } from '@/lib/config'
 
 export const SESSION_COOKIE = 'ta_session'
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7 // 7 ngày
@@ -11,11 +12,7 @@ export interface SessionPayload {
 }
 
 function getSecret(): Uint8Array {
-  const secret = process.env.SESSION_SECRET
-  if (!secret) {
-    throw new Error('Thiếu biến môi trường SESSION_SECRET')
-  }
-  return new TextEncoder().encode(secret)
+  return new TextEncoder().encode(SESSION_SECRET)
 }
 
 export async function signSession(payload: SessionPayload): Promise<string> {
