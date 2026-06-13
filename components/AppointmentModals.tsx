@@ -37,10 +37,31 @@ export default function AppointmentModals({
 
 /* ---------------- View ---------------- */
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  const [expanded, setExpanded] = useState(false)
+  const text = typeof value === 'string' ? value : null
+  const isLong = !!text && text.length > 80
   return (
     <div className="flex gap-2 border-b border-gray-50 py-2">
       <span className="w-44 shrink-0 text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-gray-800">{value || '-'}</span>
+      <div className="min-w-0 text-sm font-medium text-gray-800">
+        {text !== null ? (
+          <>
+            <p className={`whitespace-pre-wrap break-words ${isLong && !expanded ? 'line-clamp-2' : ''}`}>
+              {text || '-'}
+            </p>
+            {isLong && (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-0.5 text-xs font-medium text-brand hover:underline"
+              >
+                {expanded ? 'Thu gọn' : 'Xem thêm'}
+              </button>
+            )}
+          </>
+        ) : (
+          value || '-'
+        )}
+      </div>
     </div>
   )
 }
