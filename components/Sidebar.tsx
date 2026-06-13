@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  LayoutDashboard,
   BarChart3,
   CalendarClock,
   ChevronRight,
@@ -21,20 +22,30 @@ interface NavChild {
   icon?: React.ComponentType<{ className?: string }>
 }
 
-function NavLink({ href, label, exact = false }: { href: string; label: string; exact?: boolean }) {
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  exact = false,
+}: {
+  href: string
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  exact?: boolean
+}) {
   const pathname = usePathname()
   const active = exact ? pathname === href.split('?')[0] : pathname.startsWith(href.split('?')[0])
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition ${
+      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${
         active
           ? 'bg-brand text-white font-semibold shadow-sm'
           : 'text-gray-600 hover:bg-gray-100'
       }`}
     >
+      {Icon && <Icon className="h-4.5 w-4.5" />}
       <span>{label}</span>
-      <ChevronRight className="h-4 w-4 opacity-60" />
     </Link>
   )
 }
@@ -111,13 +122,13 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 scrollbar-thin">
-        <NavLink href="/dashboard" label="Dashboard" exact />
+        <NavLink href="/dashboard" label="Dashboard" icon={LayoutDashboard} exact />
 
         <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
           Báo cáo
         </p>
         <CollapsibleGroup
-          label="Xem báo cáo LEAD phẫu"
+          label="Xem báo cáo LEAD"
           icon={BarChart3}
           baseHref="/reports/lead-phau"
           items={[
@@ -127,14 +138,6 @@ export default function Sidebar({
             { label: 'Lead ADS', href: '/reports/lead-phau/ads' },
           ]}
         />
-        <Link
-          href="/reports/lead-yhct"
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
-        >
-          <BarChart3 className="h-4 w-4" />
-          Xem báo cáo LEAD YHCT
-          <ChevronRight className="ml-auto h-4 w-4 opacity-60" />
-        </Link>
 
         <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
           Quản lý
