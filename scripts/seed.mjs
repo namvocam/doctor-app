@@ -66,6 +66,9 @@ const reExamSchema = new mongoose.Schema(
     media: String,
     doctor: String,
     sale1: String,
+    preExamCondition: String,
+    doctorInstruction: String,
+    note: String,
   },
   { timestamps: true }
 )
@@ -221,6 +224,15 @@ function buildReExams(count = 84) {
     media: pick(['KSDHA', 'Media HN', 'Media SG'], i),
     doctor: DOCTOR,
     sale1: pick(SALES, i),
+    preExamCondition: pick(
+      ['Vết mổ khô, ổn định', 'Còn sưng nhẹ vùng mổ', 'KH phản ánh đau ít', 'Bầm tím đang tan', ''],
+      i
+    ),
+    doctorInstruction: pick(
+      ['Tái khám sau 1 tuần', 'Uống kháng sinh 5 ngày', 'Chườm lạnh, nghỉ ngơi', 'Thay băng mỗi ngày', ''],
+      i
+    ),
+    note: pick(['KH nhắn trực tiếp BS', 'Đã gọi nhắc lịch', 'Hẹn lại buổi chiều', ''], i),
     }
   })
 }

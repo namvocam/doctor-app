@@ -324,9 +324,9 @@ function ReExamClient() {
               <th className="sticky left-[64px] z-20 w-[56px] min-w-[56px] whitespace-nowrap bg-brand-navy px-3 py-3">STT</th>
               <th className="sticky left-[120px] z-20 w-[170px] min-w-[170px] whitespace-nowrap border-r border-white/20 bg-brand-navy px-3 py-3">Khách hàng</th>
               <Th>Số điện thoại</Th>
-              <Th>Ngày tái khám</Th><Th>Giờ</Th><Th>Trạng thái</Th><Th className="text-left">Dịch vụ</Th>
+              <Th>Ngày tái khám</Th><Th>Giờ</Th><Th>Trạng thái</Th><Th>Dịch vụ</Th>
               <Th>Ngày PT</Th><Th>Media</Th><Th>Bác sĩ</Th><Th>Sale 1</Th>
-              <Th className="text-left">Tình trạng trước khám</Th><Th className="text-left">Chỉ định của bác sĩ</Th><Th className="text-left">Ghi chú</Th><Th>Ngày tạo</Th>
+              <Th>Tình trạng trước khám</Th><Th>Chỉ định của bác sĩ</Th><Th className="text-left">Ghi chú</Th><Th>Ngày tạo</Th>
             </tr>
           </thead>
           <tbody>
@@ -361,18 +361,18 @@ function ReExamClient() {
                       {r.status ?? '-'}
                     </span>
                   </Td>
-                  <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
-                    <ExpandableCell text={r.service} expanded={exp} onToggle={toggle} />
+                  <td className="min-w-[160px] max-w-xs px-3 py-3 text-center align-middle">
+                    <ExpandableCell text={r.service} expanded={exp} onToggle={toggle} center />
                   </td>
                   <Td>{formatDateVN(r.surgeryDate)}</Td>
                   <Td>{r.media ?? '-'}</Td>
                   <Td>{r.doctor ?? '-'}</Td>
                   <Td>{r.sale1 ?? '-'}</Td>
-                  <td className="min-w-[180px] max-w-xs px-3 py-3 align-top">
-                    <ExpandableCell text={r.preExamCondition} expanded={exp} onToggle={toggle} />
+                  <td className="min-w-[180px] max-w-xs px-3 py-3 text-center align-middle">
+                    <ExpandableCell text={r.preExamCondition} expanded={exp} onToggle={toggle} center />
                   </td>
-                  <td className="min-w-[180px] max-w-xs px-3 py-3 align-top">
-                    <ExpandableCell text={r.doctorInstruction} expanded={exp} onToggle={toggle} />
+                  <td className="min-w-[180px] max-w-xs px-3 py-3 text-center align-middle">
+                    <ExpandableCell text={r.doctorInstruction} expanded={exp} onToggle={toggle} center />
                   </td>
                   <td className="min-w-[160px] max-w-xs px-3 py-3 align-top">
                     <ExpandableCell text={r.note} expanded={exp} onToggle={toggle} />
@@ -433,15 +433,17 @@ function ExpandableCell({
   text,
   expanded,
   onToggle,
+  center = false,
 }: {
   text?: string
   expanded: boolean
   onToggle: () => void
+  center?: boolean
 }) {
   const t = text || '-'
   const isLong = t.length > 40
   return (
-    <div className="w-48">
+    <div className={center ? 'mx-auto w-48 text-center' : 'w-48'}>
       <p className={`break-words ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`}>{t}</p>
       {isLong && (
         <button
