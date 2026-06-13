@@ -19,6 +19,7 @@ import { formatDateVN, formatNumber, maskPhone } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
 import EmptyState from '@/components/EmptyState'
+import CreateReExamModal from '@/components/CreateReExamModal'
 
 const PAGE_SIZE = 14
 
@@ -74,6 +75,7 @@ function ReExamClient() {
   const [showFilter, setShowFilter] = useState(false) // mặc định thu gọn bộ lọc
   const [maskPhones, setMaskPhones] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [showCreate, setShowCreate] = useState(false)
   const [rows, setRows] = useState<ReExam[]>([])
   const [stats, setStats] = useState({ total: 0, overdue: 0, complaints: 0 })
   const [total, setTotal] = useState(0)
@@ -189,7 +191,10 @@ function ReExamClient() {
               </span>
             )}
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
             <Plus className="h-4 w-4" /> Tạo lịch tái khám
           </button>
         </div>
@@ -338,6 +343,12 @@ function ReExamClient() {
           onPageChange={handlePageChange}
         />
       )}
+
+      <CreateReExamModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => fetchData(filters, 1)}
+      />
     </div>
   )
 }

@@ -20,6 +20,11 @@ const reExamSchema = new Schema(
     media: { type: String, trim: true },
     doctor: { type: String, trim: true },
     sale1: { type: String, trim: true },
+    // Liên kết tới ca phẫu thuật (lịch hẹn) + thông tin tái khám
+    appointmentId: { type: Schema.Types.ObjectId, ref: 'Appointment' },
+    preExamCondition: { type: String }, // Tình trạng trước khám
+    doctorInstruction: { type: String }, // Chỉ định của bác sĩ
+    note: { type: String }, // Ghi chú
   },
   { timestamps: true }
 )

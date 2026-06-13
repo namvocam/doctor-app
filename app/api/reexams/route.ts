@@ -16,6 +16,43 @@ function endOfToday() {
   return d
 }
 
+// Tạo lịch tái khám mới
+export async function POST(request: NextRequest) {
+  try {
+    if (!(await getCurrentUser())) {
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+    const body = await request.json()
+    if (!body.customerName || !body.reExamDate) {
+      return NextResponse.json(
+        { error: 'Thiếu thông tin khách hàng hoặc ngày tái khám' },
+        { status: 400 }
+      )
+    }
+
+    await connectToDatabase()
+    const reexam = await ReExamModel.create({
+      customerName: body.customerName,
+      phone: body.phone,
+      reExamDate: new Date(body.reExamDate),
+      time: body.time,
+      status: body.status || 'Đã lên lịch',
+      service: body.service,
+      surgeryDate: body.surgeryDate ? new Date(body.surgeryDate) : undefined,
+      doctor: body.doctor,
+      sale1: body.sale1,
+      appointmentId: body.appointmentId,
+      preExamCondition: body.preExamCondition,
+      doctorInstruction: body.doctorInstruction,
+      note: body.note,
+    })
+    return NextResponse.json({ data: reexam }, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/reexams error:', error)
+    return NextResponse.json({ error: 'Không thể tạo lịch tái khám' }, { status: 400 })
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!(await getCurrentUser())) {
