@@ -78,12 +78,31 @@ const categorySchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+const sourceRoleSchema = new mongoose.Schema(
+  {
+    source: String,
+    role: String,
+  },
+  { timestamps: true }
+)
 
 const User = mongoose.models.User ?? mongoose.model('User', userSchema)
 const Appointment =
   mongoose.models.Appointment ?? mongoose.model('Appointment', appointmentSchema)
 const ReExam = mongoose.models.ReExam ?? mongoose.model('ReExam', reExamSchema)
 const Category = mongoose.models.Category ?? mongoose.model('Category', categorySchema)
+const SourceRole = mongoose.models.SourceRole ?? mongoose.model('SourceRole', sourceRoleSchema)
+
+// Ánh xạ Nguồn -> vai trò báo cáo LEAD phẫu (nguồn 'none' sẽ không được tính doanh thu).
+const SOURCE_ROLE_MAP = [
+  { source: 'CTV', role: 'manager-collaborator' },
+  { source: 'QUẢN LÝ CTV', role: 'manager-collaborator' },
+  { source: 'QUẢN LÝ CTV - TIKTOK', role: 'tiktok' },
+  { source: 'ADS', role: 'ads' },
+  { source: 'ADS TIẾP CẬN', role: 'ads' },
+  { source: 'SẢN PHẨM BÁN LẺ', role: 'none' },
+  { source: 'Khách cũ giới thiệu', role: 'none' },
+]
 
 // --- Danh mục (admin có thể chỉnh ở /admin/categories) ---
 const CATEGORY_DATA = [
@@ -138,6 +157,8 @@ function buildAppointments(count = 280) {
   return Array.from({ length: count }, (_, i) => {
     const c = CUSTOMERS[i % CUSTOMERS.length]
     const round = Math.floor(i / CUSTOMERS.length)
+    // Dùng chu kỳ khác source để 'Phẫu thuật' trải đều trên mọi nguồn
+    const result = pick(RESULTS, Math.floor(i / SOURCES.length))
     return {
     customerName: round === 0 ? c[0] : `${c[0]} (${round + 1})`,
     age: c[1],
@@ -168,7 +189,7 @@ function buildAppointments(count = 280) {
     sale1: pick(SALES, i),
     sale2: i % 3 === 0 ? pick(SALES, i + 1) : '',
     quote: pick(QUOTES, i),
-    result: pick(RESULTS, i),
+    result,
     saleNote: pick(
       ['KH tiềm năng cao', 'Đang so sánh giá', 'Hẹn tái tư vấn', 'Đã chuyển cọc', ''],
       i
@@ -177,7 +198,8 @@ function buildAppointments(count = 280) {
     mktNote: pick(['Chạy ads FB', 'Lead TikTok', 'Remarketing', ''], i),
     dataReceivedAt: daysFromNow(-(i + 10)),
     recording: i % 2 === 0 ? `https://example.com/rec/${i + 1}.mp3` : '',
-    revenue: i % 3 === 0 ? (10 + (i % 30)) * 1_000_000 : 0,
+    // Doanh thu chỉ tính cho lịch hẹn đã phẫu thuật
+    revenue: result === 'Phẫu thuật' ? (12 + (i % 50)) * 1_000_000 : 0,
     highlight: i % 7 === 0,
     }
   })
@@ -240,6 +262,11 @@ async function main() {
   await Category.deleteMany({})
   await Category.insertMany(CATEGORY_DATA)
   console.log(`✅ Đã tạo ${CATEGORY_DATA.length} danh mục lọc`)
+
+  // Source -> role (cho báo cáo LEAD phẫu)
+  await SourceRole.deleteMany({})
+  await SourceRole.insertMany(SOURCE_ROLE_MAP)
+  console.log(`✅ Đã tạo ${SOURCE_ROLE_MAP.length} ánh xạ nguồn → vai trò`)
 
   console.log('\n🎉 Seed hoàn tất!')
   console.log('   Đăng nhập: bskhanh / 123456  (admin)')

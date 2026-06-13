@@ -116,14 +116,17 @@ export default function Sidebar({
         <p className="px-3 pb-1 pt-4 text-xs font-bold uppercase tracking-wide text-accent">
           Báo cáo
         </p>
-        <Link
-          href="/reports/lead-phau"
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
-        >
-          <BarChart3 className="h-4 w-4" />
-          Xem báo cáo LEAD phẫu
-          <ChevronRight className="ml-auto h-4 w-4 opacity-60" />
-        </Link>
+        <CollapsibleGroup
+          label="Xem báo cáo LEAD phẫu"
+          icon={BarChart3}
+          baseHref="/reports/lead-phau"
+          items={[
+            { label: 'Tất cả', href: '/reports/lead-phau' },
+            { label: 'Lead quản lý CTV', href: '/reports/lead-phau/ctv' },
+            { label: 'Lead Tiktok', href: '/reports/lead-phau/tiktok' },
+            { label: 'Lead ADS', href: '/reports/lead-phau/ads' },
+          ]}
+        />
         <Link
           href="/reports/lead-yhct"
           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
