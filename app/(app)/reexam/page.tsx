@@ -10,16 +10,22 @@ import {
   Plus,
   FileDown,
   CalendarDays,
+  Clock,
   TriangleAlert,
+  Wifi,
   MessageSquare,
+  Bandage,
+  Ban,
   MoreVertical,
   Loader2,
+  type LucideIcon,
 } from 'lucide-react'
 import { formatDateVN, formatNumber, maskPhone } from '@/lib/format'
 import { exportCSV } from '@/lib/csv'
 import Pagination from '@/components/Pagination'
 import EmptyState from '@/components/EmptyState'
 import CreateReExamModal from '@/components/CreateReExamModal'
+import { REEXAM_STATUSES, REEXAM_STATUS_STYLE } from '@/lib/reexamStatus'
 
 const PAGE_SIZE = 14
 
@@ -37,19 +43,19 @@ interface ReExam {
   sale1?: string
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  'Phàn nàn': 'bg-green-100 text-green-700',
-  'Quá hạn': 'bg-red-100 text-red-700',
-  'Đã lên lịch': 'bg-blue-100 text-blue-700',
-  'Đã tái khám': 'bg-gray-100 text-gray-700',
-  'Đã huỷ': 'bg-gray-200 text-gray-500',
+function rowTint(status?: string) {
+  return REEXAM_STATUS_STYLE[status ?? '']?.row ?? 'hover:bg-gray-50'
 }
 
-function rowTint(status?: string) {
-  if (status === 'Phàn nàn') return 'bg-green-50'
-  if (status === 'Quá hạn') return 'bg-red-50'
-  return 'hover:bg-gray-50'
-}
+// Box thống kê theo trạng thái (icon + màu) - khớp ảnh thiết kế
+const STATUS_BOXES: { status: string; icon: LucideIcon; color: string; bg: string }[] = [
+  { status: 'Sắp tới', icon: Clock, color: 'text-slate-600', bg: 'bg-slate-100' },
+  { status: 'Quá hạn', icon: TriangleAlert, color: 'text-red-600', bg: 'bg-red-100' },
+  { status: 'Online', icon: Wifi, color: 'text-amber-600', bg: 'bg-amber-100' },
+  { status: 'Phàn nàn', icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-100' },
+  { status: 'Xử lý vết thương', icon: Bandage, color: 'text-orange-600', bg: 'bg-orange-100' },
+  { status: 'Đã huỷ', icon: Ban, color: 'text-gray-500', bg: 'bg-gray-200' },
+]
 
 const QUICK_RANGES = [
   'Hôm nay', 'Hôm qua', 'Ngày mai', 'Tuần này', 'Tuần trước', 'Tháng này', 'Tháng trước', '30 ngày',
@@ -77,7 +83,7 @@ function ReExamClient() {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [showCreate, setShowCreate] = useState(false)
   const [rows, setRows] = useState<ReExam[]>([])
-  const [stats, setStats] = useState({ total: 0, overdue: 0, complaints: 0 })
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -107,7 +113,7 @@ function ReExamClient() {
         const res = await fetch(`/api/reexams?${buildQuery(f, pageArg)}`)
         const json = await res.json()
         setRows(json.data ?? [])
-        setStats(json.stats ?? { total: 0, overdue: 0, complaints: 0 })
+        setStatusCounts(json.statusCounts ?? {})
         setTotal(json.total ?? 0)
       } finally {
         setLoading(false)
@@ -210,11 +216,9 @@ function ReExamClient() {
             <Field label="Trạng thái">
               <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="input">
                 <option value="">Tất cả</option>
-                <option>Đã lên lịch</option>
-                <option>Đã tái khám</option>
-                <option>Quá hạn</option>
-                <option>Phàn nàn</option>
-                <option>Đã huỷ</option>
+                {REEXAM_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </Field>
             <Field label="Từ ngày">
@@ -258,16 +262,24 @@ function ReExamClient() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={<CalendarDays className="h-5 w-5" />} label="Tổng tái khám" value={stats.total} color="text-brand" bg="bg-brand/10" />
-        <StatCard icon={<TriangleAlert className="h-5 w-5" />} label="Quá hạn" value={stats.overdue} color="text-red-600" bg="bg-red-100" />
-        <StatCard icon={<MessageSquare className="h-5 w-5" />} label="Phàn nàn" value={stats.complaints} color="text-green-600" bg="bg-green-100" />
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <StatCard icon={<CalendarDays className="h-5 w-5" />} label="Tổng tái khám" value={total} color="text-brand" bg="bg-brand/10" />
+        {STATUS_BOXES.map((b) => (
+          <StatCard
+            key={b.status}
+            icon={<b.icon className="h-5 w-5" />}
+            label={b.status}
+            value={statusCounts[b.status] ?? 0}
+            color={b.color}
+            bg={b.bg}
+          />
+        ))}
       </div>
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-600">
-          <span className="font-bold text-gray-900">{formatNumber(stats.total)}</span> kết quả
+          <span className="font-bold text-gray-900">{formatNumber(total)}</span> kết quả
         </p>
         <div className="flex items-center gap-2">
           <button onClick={handleExport} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700">
@@ -308,7 +320,7 @@ function ReExamClient() {
                   <Td className="font-medium text-brand">{formatDateVN(r.reExamDate)}</Td>
                   <Td className="text-brand">{r.time ?? '-'}</Td>
                   <Td>
-                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status ?? ''] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${REEXAM_STATUS_STYLE[r.status ?? '']?.pill ?? 'bg-gray-100 text-gray-600'}`}>
                       {r.status ?? '-'}
                     </span>
                   </Td>

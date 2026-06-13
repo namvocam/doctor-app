@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       phone: body.phone,
       reExamDate: new Date(body.reExamDate),
       time: body.time,
-      status: body.status || 'Đã lên lịch',
+      status: body.status || 'Sắp tới',
       service: body.service,
       surgeryDate: body.surgeryDate ? new Date(body.surgeryDate) : undefined,
       doctor: body.doctor,
@@ -93,21 +93,26 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(sp.get('page') ?? '1'))
     const limit = Math.min(100, Math.max(1, Number(sp.get('limit') ?? '20')))
 
-    const [data, total, overdue, complaints] = await Promise.all([
+    const [data, total, byStatus] = await Promise.all([
       ReExamModel.find(query)
         .sort({ reExamDate: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
       ReExamModel.countDocuments(query),
-      ReExamModel.countDocuments({ ...query, status: 'Quá hạn' }),
-      ReExamModel.countDocuments({ ...query, status: 'Phàn nàn' }),
+      ReExamModel.aggregate([
+        { $match: query },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ]),
     ])
+
+    const statusCounts: Record<string, number> = {}
+    for (const s of byStatus) statusCounts[s._id as string] = s.count as number
 
     return NextResponse.json({
       data,
       total,
-      stats: { total, overdue, complaints },
+      statusCounts,
       page,
       limit,
     })

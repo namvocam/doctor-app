@@ -1,12 +1,7 @@
 import { Schema, model, models, type InferSchemaType } from 'mongoose'
+import { REEXAM_STATUSES, DEFAULT_REEXAM_STATUS } from '@/lib/reexamStatus'
 
-export const REEXAM_STATUSES = [
-  'Đã lên lịch',
-  'Đã tái khám',
-  'Quá hạn',
-  'Phàn nàn',
-  'Đã huỷ',
-] as const
+export { REEXAM_STATUSES }
 
 const reExamSchema = new Schema(
   {
@@ -14,7 +9,7 @@ const reExamSchema = new Schema(
     phone: { type: String, trim: true },
     reExamDate: { type: Date, required: true },
     time: { type: String, trim: true },
-    status: { type: String, enum: REEXAM_STATUSES, default: 'Đã lên lịch' },
+    status: { type: String, enum: REEXAM_STATUSES as unknown as string[], default: DEFAULT_REEXAM_STATUS },
     service: { type: String, trim: true },
     surgeryDate: { type: Date },
     media: { type: String, trim: true },

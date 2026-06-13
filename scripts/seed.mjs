@@ -206,7 +206,7 @@ function buildAppointments(count = 280) {
 }
 
 function buildReExams(count = 84) {
-  const statuses = ['Phàn nàn', 'Đã lên lịch', 'Quá hạn', 'Đã tái khám', 'Đã lên lịch', 'Quá hạn', 'Phàn nàn']
+  const statuses = ['Sắp tới', 'Quá hạn', 'Online', 'Phàn nàn', 'Xử lý vết thương', 'Đã huỷ', 'Sắp tới']
   return Array.from({ length: count }, (_, i) => {
     const c = CUSTOMERS[i % CUSTOMERS.length]
     const round = Math.floor(i / CUSTOMERS.length)

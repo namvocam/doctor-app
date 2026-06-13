@@ -19,8 +19,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { formatDateVN } from '@/lib/format'
-
-const STATUSES = ['Đã lên lịch', 'Đã tái khám', 'Quá hạn', 'Phàn nàn', 'Đã huỷ']
+import { REEXAM_STATUSES, DEFAULT_REEXAM_STATUS } from '@/lib/reexamStatus'
 
 interface Customer {
   phone: string
@@ -78,7 +77,7 @@ export default function CreateReExamModal({
     preExamCondition: '',
     doctorInstruction: '',
     note: '',
-    status: 'Đã lên lịch',
+    status: DEFAULT_REEXAM_STATUS as string,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -110,7 +109,7 @@ export default function CreateReExamModal({
       preExamCondition: '',
       doctorInstruction: '',
       note: '',
-      status: 'Đã lên lịch',
+      status: DEFAULT_REEXAM_STATUS as string,
     })
     setError('')
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -408,7 +407,7 @@ export default function CreateReExamModal({
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                   className="input"
                 >
-                  {STATUSES.map((s) => (
+                  {REEXAM_STATUSES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
