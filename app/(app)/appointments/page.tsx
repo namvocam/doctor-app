@@ -64,6 +64,8 @@ interface Appointment {
 
 interface ColumnCtx {
   maskPhones: boolean
+  expanded: boolean
+  onToggleExpand: () => void
 }
 
 interface ColumnDef {
@@ -72,6 +74,25 @@ interface ColumnDef {
   thClass?: string
   tdClass?: string
   render: (r: Appointment, ctx: ColumnCtx) => React.ReactNode
+}
+
+/** Ô ghi chú: cố định 2 dòng, hiện "Xem thêm" để mở rộng cả hàng nếu dài. */
+function NoteCell({ text, ctx }: { text?: string; ctx: ColumnCtx }) {
+  const t = text || '-'
+  const isLong = t.length > 60
+  return (
+    <div>
+      <span className={ctx.expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}>{t}</span>
+      {isLong && (
+        <button
+          onClick={ctx.onToggleExpand}
+          className="mt-0.5 block text-xs font-medium text-brand hover:underline"
+        >
+          {ctx.expanded ? 'Thu gọn' : 'Xem thêm'}
+        </button>
+      )}
+    </div>
+  )
 }
 
 /** Các cột có thể ẩn/hiện (Thao tác & STT luôn hiển thị). */
@@ -111,7 +132,7 @@ const COLUMNS: ColumnDef[] = [
     key: 'telesaleNote',
     label: 'Ghi chú của Telesale',
     tdClass: 'min-w-[200px] max-w-xs',
-    render: (r) => <span className="line-clamp-2">{r.telesaleNote ?? '-'}</span>,
+    render: (r, ctx) => <NoteCell text={r.telesaleNote} ctx={ctx} />,
   },
   { key: 'source', label: 'Nguồn', render: (r) => r.source ?? '-' },
   { key: 'subSource', label: 'Nguồn phụ', render: (r) => r.subSource || '-' },
@@ -125,14 +146,14 @@ const COLUMNS: ColumnDef[] = [
     key: 'saleNote',
     label: 'Ghi chú của sale',
     tdClass: 'min-w-[180px] max-w-xs',
-    render: (r) => <span className="line-clamp-2">{r.saleNote || '-'}</span>,
+    render: (r, ctx) => <NoteCell text={r.saleNote} ctx={ctx} />,
   },
   { key: 'media', label: 'Media', render: (r) => r.media || '-' },
   {
     key: 'mktNote',
     label: 'Ghi chú của MKT',
     tdClass: 'min-w-[180px] max-w-xs',
-    render: (r) => <span className="line-clamp-2">{r.mktNote || '-'}</span>,
+    render: (r, ctx) => <NoteCell text={r.mktNote} ctx={ctx} />,
   },
   { key: 'dataReceivedAt', label: 'Ngày nhận data', tdClass: 'whitespace-nowrap', render: (r) => formatDateVN(r.dataReceivedAt) },
   { key: 'createdAt', label: 'Ngày tạo lịch', tdClass: 'whitespace-nowrap', render: (r) => formatDateVN(r.createdAt) },
@@ -192,8 +213,9 @@ function AppointmentsClient() {
     to: '',
   })
   const [month, setMonth] = useState(currentMonth) // YYYY-MM, dùng cho chế độ "theo tháng"
-  const [showFilter, setShowFilter] = useState(true)
+  const [showFilter, setShowFilter] = useState(false) // mặc định thu gọn bộ lọc
   const [maskPhones, setMaskPhones] = useState(false)
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -287,15 +309,12 @@ function AppointmentsClient() {
     fetchData(filters, p, month)
   }
   function handleReset() {
+    // Chỉ xoá các input bộ lọc, giữ nguyên tháng/ngày đang chọn
     const cleared = {
       q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
     }
-    const m = currentMonth()
-    const day = isToday ? defaultDayFor(m) : 1
     setFilters(cleared)
-    setMonth(m)
-    setPage(day)
-    fetchData(cleared, day, m)
+    fetchData(cleared, page, month)
   }
   function handlePageChange(p: number) {
     setPage(p)
@@ -354,7 +373,8 @@ function AppointmentsClient() {
   )
 
   const colCount = visibleColumns.length + 2 // + Thao tác + STT
-  const ctx: ColumnCtx = { maskPhones }
+  // Đếm số trường bộ lọc đang có giá trị (trừ tháng - luôn có giá trị mặc định)
+  const activeFilterCount = Object.values(filters).filter((v) => v).length
 
   return (
     <div className="space-y-4">
@@ -368,6 +388,11 @@ function AppointmentsClient() {
           className="flex items-center gap-2 rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/5"
         >
           <SlidersHorizontal className="h-4 w-4" /> Bộ lọc
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-bold text-white">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -582,26 +607,34 @@ function AppointmentsClient() {
                   </td>
                 </tr>
               ) : (
-                rows.map((r, i) => (
-                  <tr
-                    key={r._id}
-                    className={`border-b border-gray-100 ${
-                      r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <Td>
-                      <button className={r.highlight ? 'text-white' : 'text-gray-400'}>
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </Td>
-                    <Td>{(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}</Td>
-                    {visibleColumns.map((c) => (
-                      <Td key={c.key} className={c.tdClass}>
-                        {c.render(r, ctx)}
+                rows.map((r, i) => {
+                  const ctx: ColumnCtx = {
+                    maskPhones,
+                    expanded: !!expandedRows[r._id],
+                    onToggleExpand: () =>
+                      setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] })),
+                  }
+                  return (
+                    <tr
+                      key={r._id}
+                      className={`border-b border-gray-100 ${
+                        r.highlight ? 'bg-orange-400 text-white' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <Td>
+                        <button className={r.highlight ? 'text-white' : 'text-gray-400'}>
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
                       </Td>
-                    ))}
-                  </tr>
-                ))
+                      <Td>{(isToday ? 0 : (page - 1) * PAGE_SIZE) + i + 1}</Td>
+                      {visibleColumns.map((c) => (
+                        <Td key={c.key} className={c.tdClass}>
+                          {c.render(r, ctx)}
+                        </Td>
+                      ))}
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
