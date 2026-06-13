@@ -171,6 +171,8 @@ const STATUS_ROW_BG: Record<string, string> = {
   'Đã cọc': 'bg-cyan-300',
   Failed: 'bg-purple-300',
   'Hủy lịch': 'bg-slate-400',
+  'Bác sĩ từ chối': 'bg-[#cdcb55]',
+  'Hoãn mổ': 'bg-[#e6a9c1]',
 }
 
 /** Trả về class nền cho hàng dựa theo kết quả (rỗng nếu chưa cấu hình màu). */
