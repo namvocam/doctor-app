@@ -530,8 +530,8 @@ function AppointmentsClient() {
                 : 'space-y-4'
             }
           >
-        {/* Box thống kê theo kết quả của ngày đang chọn (chế độ "theo tháng") */}
-        {isToday && !loading && (
+        {/* Box thống kê theo kết quả của ngày đang chọn (ẩn khi fullscreen) */}
+        {isToday && !loading && !fullscreen && (
           <div className="flex flex-wrap gap-3">
             <StatusBox
               icon={ClipboardList}
@@ -585,7 +585,9 @@ function AppointmentsClient() {
               {fullscreen ? 'Thoát' : 'Fullscreen'}
             </button>
 
-            {/* Cột dropdown */}
+            {/* Cột dropdown + Xuất CSV: ẩn khi fullscreen */}
+            {!fullscreen && (
+              <>
             <div className="relative" ref={colRef}>
               <button
                 onClick={() => setShowCols((v) => !v)}
@@ -640,6 +642,8 @@ function AppointmentsClient() {
             >
               <FileDown className="h-4 w-4" /> Xuất CSV
             </button>
+              </>
+            )}
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input
                 type="checkbox"
