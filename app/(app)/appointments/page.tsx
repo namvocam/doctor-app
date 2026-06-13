@@ -173,6 +173,8 @@ const STATUS_ROW_BG: Record<string, string> = {
   'Hủy lịch': 'bg-slate-400',
   'Bác sĩ từ chối': 'bg-[#cdcb55]',
   'Hoãn mổ': 'bg-[#e6a9c1]',
+  'Phẫu thuật': 'bg-orange-300',
+  'Đã đặt lịch': 'bg-white',
 }
 
 /** Trả về class nền cho hàng dựa theo kết quả (rỗng nếu chưa cấu hình màu). */
