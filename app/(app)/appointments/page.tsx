@@ -27,6 +27,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  Plus,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -228,6 +229,7 @@ function AppointmentsClient() {
   const [viewing, setViewing] = useState<Appointment | null>(null)
   const [editing, setEditing] = useState<Appointment | null>(null)
   const [deleting, setDeleting] = useState<Appointment | null>(null)
+  const [creating, setCreating] = useState(false)
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -426,17 +428,25 @@ function AppointmentsClient() {
         <h1 className="flex items-center gap-2 text-xl font-bold text-gray-800">
           <CalendarClock className="h-6 w-6 text-brand" /> {title}
         </h1>
-        <button
-          onClick={() => setShowFilter((v) => !v)}
-          className="flex items-center gap-2 rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/5"
-        >
-          <SlidersHorizontal className="h-4 w-4" /> Bộ lọc
-          {activeFilterCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-bold text-white">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter((v) => !v)}
+            className="flex items-center gap-2 rounded-lg border border-brand/30 bg-white px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/5"
+          >
+            <SlidersHorizontal className="h-4 w-4" /> Bộ lọc
+            {activeFilterCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-xs font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-dark"
+          >
+            <Plus className="h-4 w-4" /> Tạo mới lịch hẹn
+          </button>
+        </div>
       </div>
 
       {/* Filter panel */}
@@ -759,11 +769,13 @@ function AppointmentsClient() {
         viewing={viewing}
         editing={editing}
         deleting={deleting}
+        creating={creating}
         cats={cats}
         onClose={() => {
           setViewing(null)
           setEditing(null)
           setDeleting(null)
+          setCreating(false)
         }}
         onChanged={() => fetchData(filters, page, month)}
       />

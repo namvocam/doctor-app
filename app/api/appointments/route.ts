@@ -31,6 +31,44 @@ function ageLabelToQuery(label: string): Record<string, number> | null {
   return null
 }
 
+const CREATE_FIELDS = [
+  'customerName', 'age', 'phone', 'performAt', 'doctor', 'surgery', 'address',
+  'province', 'service1', 'service2', 'test', 'telesaleNote', 'source', 'subSource',
+  'groupSource', 'telesale', 'telesaleCtv', 'sale1', 'sale2', 'quote', 'result',
+  'saleNote', 'media', 'mktNote', 'dataReceivedAt', 'recording', 'revenue', 'highlight',
+] as const
+const DATE_FIELDS = new Set(['performAt', 'dataReceivedAt'])
+
+// Tạo mới lịch hẹn
+export async function POST(request: NextRequest) {
+  try {
+    if (!(await getCurrentUser())) {
+      return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 })
+    }
+    const body = await request.json()
+    if (!body.customerName || !body.performAt) {
+      return NextResponse.json(
+        { error: 'Thiếu tên khách hàng hoặc ngày giờ thực hiện' },
+        { status: 400 }
+      )
+    }
+
+    const doc: Record<string, unknown> = {}
+    for (const key of CREATE_FIELDS) {
+      if (!(key in body)) continue
+      const value = body[key]
+      doc[key] = DATE_FIELDS.has(key) ? (value ? new Date(value) : undefined) : value
+    }
+
+    await connectToDatabase()
+    const created = await AppointmentModel.create(doc)
+    return NextResponse.json({ data: created }, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/appointments error:', error)
+    return NextResponse.json({ error: 'Không thể tạo lịch hẹn' }, { status: 400 })
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!(await getCurrentUser())) {

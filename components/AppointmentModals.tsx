@@ -10,17 +10,27 @@ interface Props {
   viewing: Appointment | null
   editing: Appointment | null
   deleting: Appointment | null
+  creating?: boolean
   cats: CategoryMap
   onClose: () => void
   onChanged: () => void
 }
 
-export default function AppointmentModals({ viewing, editing, deleting, cats, onClose, onChanged }: Props) {
+export default function AppointmentModals({
+  viewing,
+  editing,
+  deleting,
+  creating = false,
+  cats,
+  onClose,
+  onChanged,
+}: Props) {
   return (
     <>
       <ViewModal appointment={viewing} onClose={onClose} />
       <EditModal appointment={editing} cats={cats} onClose={onClose} onSaved={onChanged} />
       <DeleteModal appointment={deleting} onClose={onClose} onDeleted={onChanged} />
+      <CreateModal open={creating} cats={cats} onClose={onClose} onCreated={onChanged} />
     </>
   )
 }
@@ -140,8 +150,6 @@ function EditModal({
     }
   }
 
-  const v = (k: string) => (form[k] as string) ?? ''
-
   return (
     <Modal
       open={!!appointment}
@@ -165,44 +173,139 @@ function EditModal({
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <F label="Tên KH"><input className="input" value={v('customerName')} onChange={(e) => set('customerName', e.target.value)} /></F>
-        <F label="Tuổi"><input type="number" className="input" value={v('age')} onChange={(e) => set('age', e.target.value ? Number(e.target.value) : undefined)} /></F>
-        <F label="Số ĐT/Hộ chiếu"><input className="input" value={v('phone')} onChange={(e) => set('phone', e.target.value)} /></F>
-        <F label="Ngày giờ thực hiện"><input type="datetime-local" className="input" value={v('performAt')} onChange={(e) => set('performAt', e.target.value)} /></F>
-        <F label="Bác sĩ"><input className="input" value={v('doctor')} onChange={(e) => set('doctor', e.target.value)} /></F>
-        <Sel label="Tỉnh" options={cats.province?.options} value={v('province')} onChange={(x) => set('province', x)} />
-        <Sel label="Dịch vụ 1" options={cats.service?.options} value={v('service1')} onChange={(x) => set('service1', x)} />
-        <Sel label="Dịch vụ 2" options={cats.service?.options} value={v('service2')} onChange={(x) => set('service2', x)} />
-        <Sel label="Nguồn" options={cats.source?.options} value={v('source')} onChange={(x) => set('source', x)} />
-        <Sel label="Báo giá" options={cats.quote?.options} value={v('quote')} onChange={(x) => set('quote', x)} />
-        <Sel label="Kết quả" options={cats.result?.options} value={v('result')} onChange={(x) => set('result', x)} />
-        <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
-        <F label="Nguồn phụ"><input className="input" value={v('subSource')} onChange={(e) => set('subSource', e.target.value)} /></F>
-        <F label="Nguồn gr tiếp cận sau"><input className="input" value={v('groupSource')} onChange={(e) => set('groupSource', e.target.value)} /></F>
-        <F label="Telesale"><input className="input" value={v('telesale')} onChange={(e) => set('telesale', e.target.value)} /></F>
-        <F label="Telesale CTV"><input className="input" value={v('telesaleCtv')} onChange={(e) => set('telesaleCtv', e.target.value)} /></F>
-        <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
-        <F label="Sale 2"><input className="input" value={v('sale2')} onChange={(e) => set('sale2', e.target.value)} /></F>
-        <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
-        <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
-        <F label="Địa chỉ"><input className="input" value={v('address')} onChange={(e) => set('address', e.target.value)} /></F>
-        <div className="flex items-center gap-6 sm:col-span-2">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={!!form.surgery} onChange={(e) => set('surgery', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Phẫu thuật
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={!!form.test} onChange={(e) => set('test', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Xét nghiệm
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={!!form.highlight} onChange={(e) => set('highlight', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Tô màu nổi bật
-          </label>
-        </div>
-        <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
-        <F label="Ghi chú sale" full><textarea className="input min-h-16" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} /></F>
-        <F label="Ghi chú MKT" full><textarea className="input min-h-16" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} /></F>
-      </div>
+      <AppointmentFields form={form} set={set} cats={cats} />
     </Modal>
+  )
+}
+
+/* ---------------- Create ---------------- */
+function CreateModal({
+  open,
+  cats,
+  onClose,
+  onCreated,
+}: {
+  open: boolean
+  cats: CategoryMap
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [form, setForm] = useState<Record<string, unknown>>({})
+  const [wasOpen, setWasOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  // Reset form mỗi khi mở
+  if (open && !wasOpen) {
+    setWasOpen(true)
+    setForm({ surgery: false, test: false, highlight: false, revenue: 0 })
+    setError('')
+  }
+  if (!open && wasOpen) setWasOpen(false)
+
+  function set(key: string, value: unknown) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function save() {
+    if (!form.customerName || !form.performAt) {
+      setError('Vui lòng nhập Tên KH và Ngày giờ thực hiện')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        const j = await res.json()
+        setError(j.error ?? 'Tạo thất bại')
+        return
+      }
+      onCreated()
+      onClose()
+    } catch {
+      setError('Không thể kết nối máy chủ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title="Tạo mới lịch hẹn"
+      onClose={onClose}
+      size="lg"
+      footer={
+        <>
+          {error && <span className="mr-auto self-center text-sm text-red-600">{error}</span>}
+          <button onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+            Huỷ
+          </button>
+          <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Tạo lịch hẹn
+          </button>
+        </>
+      }
+    >
+      <AppointmentFields form={form} set={set} cats={cats} />
+    </Modal>
+  )
+}
+
+/* ---------------- Shared form fields ---------------- */
+function AppointmentFields({
+  form,
+  set,
+  cats,
+}: {
+  form: Record<string, unknown>
+  set: (key: string, value: unknown) => void
+  cats: CategoryMap
+}) {
+  const v = (k: string) => (form[k] as string) ?? ''
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <F label="Tên KH"><input className="input" value={v('customerName')} onChange={(e) => set('customerName', e.target.value)} /></F>
+      <F label="Tuổi"><input type="number" className="input" value={v('age')} onChange={(e) => set('age', e.target.value ? Number(e.target.value) : undefined)} /></F>
+      <F label="Số ĐT/Hộ chiếu"><input className="input" value={v('phone')} onChange={(e) => set('phone', e.target.value)} /></F>
+      <F label="Ngày giờ thực hiện"><input type="datetime-local" className="input" value={v('performAt')} onChange={(e) => set('performAt', e.target.value)} /></F>
+      <F label="Bác sĩ"><input className="input" value={v('doctor')} onChange={(e) => set('doctor', e.target.value)} /></F>
+      <Sel label="Tỉnh" options={cats.province?.options} value={v('province')} onChange={(x) => set('province', x)} />
+      <Sel label="Dịch vụ 1" options={cats.service?.options} value={v('service1')} onChange={(x) => set('service1', x)} />
+      <Sel label="Dịch vụ 2" options={cats.service?.options} value={v('service2')} onChange={(x) => set('service2', x)} />
+      <Sel label="Nguồn" options={cats.source?.options} value={v('source')} onChange={(x) => set('source', x)} />
+      <Sel label="Báo giá" options={cats.quote?.options} value={v('quote')} onChange={(x) => set('quote', x)} />
+      <Sel label="Kết quả" options={cats.result?.options} value={v('result')} onChange={(x) => set('result', x)} />
+      <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
+      <F label="Nguồn phụ"><input className="input" value={v('subSource')} onChange={(e) => set('subSource', e.target.value)} /></F>
+      <F label="Nguồn gr tiếp cận sau"><input className="input" value={v('groupSource')} onChange={(e) => set('groupSource', e.target.value)} /></F>
+      <F label="Telesale"><input className="input" value={v('telesale')} onChange={(e) => set('telesale', e.target.value)} /></F>
+      <F label="Telesale CTV"><input className="input" value={v('telesaleCtv')} onChange={(e) => set('telesaleCtv', e.target.value)} /></F>
+      <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
+      <F label="Sale 2"><input className="input" value={v('sale2')} onChange={(e) => set('sale2', e.target.value)} /></F>
+      <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
+      <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
+      <F label="Địa chỉ"><input className="input" value={v('address')} onChange={(e) => set('address', e.target.value)} /></F>
+      <div className="flex items-center gap-6 sm:col-span-2">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={!!form.surgery} onChange={(e) => set('surgery', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Phẫu thuật
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={!!form.test} onChange={(e) => set('test', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Xét nghiệm
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={!!form.highlight} onChange={(e) => set('highlight', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" /> Tô màu nổi bật
+        </label>
+      </div>
+      <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
+      <F label="Ghi chú sale" full><textarea className="input min-h-16" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} /></F>
+      <F label="Ghi chú MKT" full><textarea className="input min-h-16" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} /></F>
+    </div>
   )
 }
 
