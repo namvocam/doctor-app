@@ -17,3 +17,10 @@ const DEFAULT_SESSION_SECRET = 'trung-anh-group-secret-key-doi-trong-production-
 export const MONGODB_URI = process.env.MONGODB_URI || DEFAULT_MONGODB_URI
 
 export const SESSION_SECRET = process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET
+
+// Cloudinary (upload file ghi âm).
+// CLOUDINARY_API_SECRET CHỈ đọc từ biến môi trường (không hardcode vào source).
+// Khai báo trong .env.local (dev) hoặc Environment Variables nơi deploy.
+export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'dacanglcz'
+export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || ''
+export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || ''

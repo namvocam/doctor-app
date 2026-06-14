@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Check } from 'lucide-react'
+import { Loader2, Check, Upload } from 'lucide-react'
 import Modal from '@/components/Modal'
 import { formatDateTimeVN, formatDateVN, formatCurrency } from '@/lib/format'
 import type { Appointment, CategoryMap } from '@/lib/appointmentTypes'
@@ -392,6 +392,54 @@ function CreateModal({
 
 export const DEFAULT_DOCTOR = 'Bs. Đình Khanh'
 
+/* ---------------- Upload file ghi âm (Cloudinary) ---------------- */
+function AudioUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const j = await res.json()
+      if (!res.ok) {
+        setError(j.error ?? 'Tải lên thất bại')
+        return
+      }
+      onChange(j.url)
+    } catch {
+      setError('Không thể tải file lên')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <div>
+      {value && <audio controls src={value} className="mb-2 h-9 w-full max-w-xs" />}
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/10">
+        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        {value ? 'Đổi file ghi âm' : 'Thêm file ghi âm'}
+        <input
+          type="file"
+          accept="audio/*,.mp3,.wav,.m4a"
+          className="hidden"
+          disabled={uploading}
+          onChange={handleFile}
+        />
+      </label>
+      <p className="mt-1 text-xs text-gray-400">Hỗ trợ định dạng: MP3, WAV, M4A</p>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 function Section({ title }: { title: string }) {
   return (
     <div className="-mx-5 mb-4 mt-6 bg-gray-100 px-5 py-2.5 first:mt-0">
@@ -470,7 +518,7 @@ function AppointmentFields({
         <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
         <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
         <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
-        <F label="Ghi âm (đường dẫn)"><input className="input" value={v('recording')} onChange={(e) => set('recording', e.target.value)} placeholder="Link file ghi âm (MP3, WAV, M4A)" /></F>
+        <F label="File ghi âm"><AudioUpload value={v('recording')} onChange={(url) => set('recording', url)} /></F>
         <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
         <F label="Ghi chú của sale" full><textarea className="input min-h-16" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} /></F>
         <F label="Ghi chú của MKT" full><textarea className="input min-h-16" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} placeholder="Nhập ghi chú của MKT..." /></F>
