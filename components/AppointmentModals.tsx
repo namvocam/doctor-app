@@ -65,6 +65,7 @@ function LimitedEditModal({
       result: appointment.result ?? '',
       saleNote: appointment.saleNote ?? '',
       revenue: appointment.revenue ?? 0,
+      mktNote: appointment.mktNote ?? '',
     })
     setError('')
   }
@@ -140,6 +141,12 @@ function LimitedEditModal({
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Ghi chú của sale</label>
             <textarea className="input min-h-20" value={v('saleNote')} onChange={(e) => set('saleNote', e.target.value)} />
+          </div>
+        )}
+        {fields.includes('mktNote') && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Ghi chú của MKT</label>
+            <textarea className="input min-h-20" value={v('mktNote')} onChange={(e) => set('mktNote', e.target.value)} placeholder="Nhập ghi chú của MKT..." />
           </div>
         )}
       </div>

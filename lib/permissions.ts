@@ -61,6 +61,7 @@ export function editableAppointmentFields(role?: string, isOwner = false): 'all'
   if (canEditAppointment(role, isOwner)) return 'all'
   if (role === 'sale') return ['result', 'saleNote', 'revenue']
   if (role === 'nurse') return ['result']
+  if (role === 'ads' || role === 'tiktok' || role === 'manager-collaborator') return ['mktNote']
   return []
 }
 
