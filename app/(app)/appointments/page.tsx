@@ -28,6 +28,9 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Play,
+  Mic,
+  MicOff,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -43,6 +46,7 @@ import DayPagination from '@/components/DayPagination'
 import EmptyState from '@/components/EmptyState'
 import AppointmentModals from '@/components/AppointmentModals'
 import ActionMenu from '@/components/ActionMenu'
+import Modal from '@/components/Modal'
 import type { Appointment } from '@/lib/appointmentTypes'
 import { CATEGORY_LABELS, CATEGORY_ALL_LABELS, type CategoryType } from '@/lib/categories'
 import { useCurrentUser } from '@/lib/userContext'
@@ -55,6 +59,7 @@ interface ColumnCtx {
   maskPhones: boolean
   expanded: boolean
   onToggleExpand: () => void
+  onPlayAudio: (url: string) => void
 }
 
 interface ColumnDef {
@@ -158,7 +163,21 @@ const COLUMNS: ColumnDef[] = [
   {
     key: 'recording',
     label: 'Ghi âm',
-    render: (r) => (r.recording ? <audio controls src={r.recording} className="h-8 w-40" /> : '-'),
+    render: (r, ctx) =>
+      r.recording ? (
+        <button
+          onClick={() => ctx.onPlayAudio(r.recording!)}
+          title="Nghe ghi âm"
+          className="inline-flex items-center gap-1.5 rounded-md bg-brand px-2.5 py-1 text-white transition hover:bg-brand-dark"
+        >
+          <Play className="h-3.5 w-3.5 fill-current" />
+          <Mic className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-gray-500">
+          <MicOff className="h-3.5 w-3.5" /> Chưa có
+        </span>
+      ),
   },
   {
     key: 'revenue',
@@ -238,6 +257,7 @@ function AppointmentsClient() {
   const [creating, setCreating] = useState(false)
   const [statusEditing, setStatusEditing] = useState<Appointment | null>(null)
   const [statusFields, setStatusFields] = useState<string[]>(['result'])
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const me = useCurrentUser()
   const [rows, setRows] = useState<Appointment[]>([])
   const [total, setTotal] = useState(0)
@@ -721,6 +741,7 @@ function AppointmentsClient() {
                     expanded: !!expandedRows[r._id],
                     onToggleExpand: () =>
                       setExpandedRows((prev) => ({ ...prev, [r._id]: !prev[r._id] })),
+                    onPlayAudio: setAudioUrl,
                   }
                   const bg = rowBg(r)
                   const stickyBg = bg || 'bg-white'
@@ -803,6 +824,10 @@ function AppointmentsClient() {
         }}
         onChanged={() => fetchData(filters, page, month)}
       />
+
+      <Modal open={!!audioUrl} title="Các file ghi âm" onClose={() => setAudioUrl(null)} size="md">
+        {audioUrl && <audio controls autoPlay src={audioUrl} className="w-full" />}
+      </Modal>
     </div>
   )
 }
