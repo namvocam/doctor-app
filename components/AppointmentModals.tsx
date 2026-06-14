@@ -392,6 +392,29 @@ function CreateModal({
 
 export const DEFAULT_DOCTOR = 'Bs. Đình Khanh'
 
+// Tuỳ chọn Media (quyền) - nhóm theo Quyền SDHA / Quyền khác
+const MEDIA_GROUPS: { group: string; items: string[] }[] = [
+  { group: 'Quyền SDHA', items: ['Chưa xác định SDHA', 'SDHA lộ mặt', 'SDHA che mặt', 'KSDHA'] },
+  { group: 'Quyền khác', items: ['Che hình xăm', 'Che thông tin khách hàng', 'Chỉnh méo giọng', 'Khác'] },
+]
+const MEDIA_VALUES = MEDIA_GROUPS.flatMap((g) => g.items)
+
+function MediaSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">— Chưa chọn (chưa thiết lập) —</option>
+      {MEDIA_GROUPS.map((g) => (
+        <optgroup key={g.group} label={g.group}>
+          {g.items.map((o) => (
+            <option key={o} value={o}>{o}</option>
+          ))}
+        </optgroup>
+      ))}
+      {value && !MEDIA_VALUES.includes(value) && <option value={value}>{value}</option>}
+    </select>
+  )
+}
+
 /* ---------------- Upload file ghi âm (Cloudinary) ---------------- */
 function AudioUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const [uploading, setUploading] = useState(false)
@@ -531,7 +554,7 @@ function AppointmentFields({
         <F label="Sale 1"><input className="input" value={v('sale1')} onChange={(e) => set('sale1', e.target.value)} /></F>
         <F label="Sale 2"><input className="input" value={v('sale2')} onChange={(e) => set('sale2', e.target.value)} /></F>
         <F label="Doanh thu (đ)"><input type="number" className="input" value={v('revenue')} onChange={(e) => set('revenue', e.target.value ? Number(e.target.value) : 0)} /></F>
-        <F label="Media"><input className="input" value={v('media')} onChange={(e) => set('media', e.target.value)} /></F>
+        <F label="Media"><MediaSelect value={v('media')} onChange={(x) => set('media', x)} /></F>
         <F label="Ngày nhận data"><input type="date" className="input" value={v('dataReceivedAt')} onChange={(e) => set('dataReceivedAt', e.target.value)} /></F>
         <F label="File ghi âm"><AudioUpload value={v('recording')} onChange={(url) => set('recording', url)} /></F>
         <F label="Ghi chú Telesale" full><textarea className="input min-h-16" value={v('telesaleNote')} onChange={(e) => set('telesaleNote', e.target.value)} /></F>
