@@ -403,15 +403,30 @@ function AudioUpload({ value, onChange }: { value: string; onChange: (url: strin
     setUploading(true)
     setError('')
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      const j = await res.json()
-      if (!res.ok) {
-        setError(j.error ?? 'Tải lên thất bại')
+      // 1) Lấy chữ ký từ server (Secret không lộ ra client)
+      const signRes = await fetch('/api/upload/sign', { method: 'POST' })
+      const sign = await signRes.json()
+      if (!signRes.ok) {
+        setError(sign.error ?? 'Không lấy được chữ ký upload')
         return
       }
-      onChange(j.url)
+      // 2) Upload TRỰC TIẾP lên Cloudinary (không qua serverless -> không bị giới hạn dung lượng)
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('api_key', sign.apiKey)
+      fd.append('timestamp', String(sign.timestamp))
+      fd.append('signature', sign.signature)
+      fd.append('folder', sign.folder)
+      const up = await fetch(
+        `https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`,
+        { method: 'POST', body: fd }
+      )
+      const j = await up.json()
+      if (!up.ok || !j.secure_url) {
+        setError(j.error?.message ?? 'Tải lên thất bại')
+        return
+      }
+      onChange(j.secure_url)
     } catch {
       setError('Không thể tải file lên')
     } finally {
