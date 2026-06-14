@@ -606,16 +606,22 @@ function AppointmentsClient() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-gray-600">
-            {isToday && (
+            {loading ? (
+              <span className="text-gray-400">Đang tải...</span>
+            ) : (
               <>
-                Ngày{' '}
-                <span className="font-bold text-gray-900">
-                  {String(page).padStart(2, '0')}/{month.split('-').reverse().join('/')}
-                </span>{' '}
-                —{' '}
+                {isToday && (
+                  <>
+                    Ngày{' '}
+                    <span className="font-bold text-gray-900">
+                      {String(page).padStart(2, '0')}/{month.split('-').reverse().join('/')}
+                    </span>{' '}
+                    —{' '}
+                  </>
+                )}
+                Đã tìm thấy <span className="font-bold text-gray-900">{formatNumber(total)}</span> lịch hẹn.
               </>
             )}
-            Đã tìm thấy <span className="font-bold text-gray-900">{formatNumber(total)}</span> lịch hẹn.
           </p>
           <div className="flex items-center gap-2">
             <button
