@@ -157,56 +157,58 @@ const CUSTOMERS = [
   ['Quyên Nguyễn', 32, '0966778899'],
 ]
 
-function buildAppointments(count = 280) {
-  return Array.from({ length: count }, (_, i) => {
-    const c = CUSTOMERS[i % CUSTOMERS.length]
-    const round = Math.floor(i / CUSTOMERS.length)
-    // Dùng chu kỳ khác source để 'Phẫu thuật' trải đều trên mọi nguồn
-    const result = pick(RESULTS, Math.floor(i / SOURCES.length))
-    return {
-    customerName: round === 0 ? c[0] : `${c[0]} (${round + 1})`,
-    age: c[1],
-    phone: '0' + (900000000 + i * 137).toString().slice(0, 9),
-    performAt: daysFromNow(i % 4 === 0 ? 0 : i - 7),
-    doctor: DOCTOR,
-    surgery: i % 3 !== 0,
-    address: pick(['Đê La Thành - Hà Nội', 'Sơn La - Sơn La', 'Hải Phòng', 'Bình Dương', 'Quận 1 - HCM'], i),
-    province: pick(PROVINCES, i),
-    service1: pick(SERVICES, i),
-    service2: i % 2 === 0 ? pick(SERVICES, i + 2) : '',
-    test: i % 2 === 0,
-    telesaleNote: pick(
-      [
-        'Loại KH: sale Oanh chốt 16tr. Mổ CA 1...',
-        'Tạo hình bụng toàn thể...',
-        'KH hẹn tư vấn lại tuần sau',
-        'Đã cọc 5tr giữ lịch',
-        'Cần tư vấn thêm về chi phí',
-      ],
-      i
-    ),
-    source: pick(SOURCES, i),
-    subSource: pick(['Form', 'Inbox', 'Comment', 'Hotline'], i),
-    groupSource: pick(['Group Sài Gòn', 'Group Hà Nội', 'Group VIP', ''], i),
-    telesale: pick(['Ngọc Anh', 'Thu Hà', 'Mai Linh', 'Phương Anh'], i),
-    telesaleCtv: pick(['CTV Lan', 'CTV Hương', '', 'CTV Tú'], i),
-    sale1: pick(SALES, i),
-    sale2: i % 3 === 0 ? pick(SALES, i + 1) : '',
-    quote: pick(QUOTES, i),
-    result,
-    saleNote: pick(
-      ['KH tiềm năng cao', 'Đang so sánh giá', 'Hẹn tái tư vấn', 'Đã chuyển cọc', ''],
-      i
-    ),
-    media: pick(['KSDHA', 'Media HN', 'Media SG', 'Team Ads'], i),
-    mktNote: pick(['Chạy ads FB', 'Lead TikTok', 'Remarketing', ''], i),
-    dataReceivedAt: daysFromNow(-(i + 10)),
-    recording: i % 2 === 0 ? `https://example.com/rec/${i + 1}.mp3` : '',
-    // Doanh thu chỉ tính cho lịch hẹn đã phẫu thuật
-    revenue: result === 'Phẫu thuật' ? (12 + (i % 50)) * 1_000_000 : 0,
-    highlight: i % 7 === 0,
+// Dữ liệu chuẩn: lịch hẹn từ 01/06/2026 đến 14/06/2026, mỗi ngày 3-5 bản ghi (cố định).
+function buildAppointments() {
+  const out = []
+  let i = 0
+  for (let day = 1; day <= 14; day++) {
+    const count = 3 + (day % 3) // 3..5, cố định theo ngày
+    for (let k = 0; k < count; k++) {
+      const c = CUSTOMERS[i % CUSTOMERS.length]
+      const result = pick(RESULTS, i)
+      out.push({
+        customerName: c[0],
+        age: c[1],
+        phone: c[2],
+        performAt: new Date(2026, 5, day, 8 + (k % 9), (k % 2) * 30, 0, 0),
+        doctor: DOCTOR,
+        surgery: i % 3 !== 0,
+        address: pick(['Đê La Thành - Hà Nội', 'Sơn La - Sơn La', 'Hải Phòng', 'Bình Dương', 'Quận 1 - HCM'], i),
+        province: pick(PROVINCES, i),
+        service1: pick(SERVICES, i),
+        service2: i % 2 === 0 ? pick(SERVICES, i + 2) : '',
+        test: i % 2 === 0,
+        telesaleNote: pick(
+          [
+            'Loại KH: sale Oanh chốt 16tr. Mổ CA 1...',
+            'Tạo hình bụng toàn thể...',
+            'KH hẹn tư vấn lại tuần sau',
+            'Đã cọc 5tr giữ lịch',
+            'Cần tư vấn thêm về chi phí',
+          ],
+          i
+        ),
+        source: pick(SOURCES, i),
+        subSource: pick(['Form', 'Inbox', 'Comment', 'Hotline'], i),
+        groupSource: pick(['Group Sài Gòn', 'Group Hà Nội', 'Group VIP', ''], i),
+        telesale: pick(['Ngọc Anh', 'Thu Hà', 'Mai Linh', 'Phương Anh'], i),
+        telesaleCtv: pick(['CTV Lan', 'CTV Hương', '', 'CTV Tú'], i),
+        sale1: pick(SALES, i),
+        sale2: i % 3 === 0 ? pick(SALES, i + 1) : '',
+        quote: pick(QUOTES, i),
+        result,
+        saleNote: pick(['KH tiềm năng cao', 'Đang so sánh giá', 'Hẹn tái tư vấn', 'Đã chuyển cọc', ''], i),
+        media: pick(['KSDHA', 'Media HN', 'Media SG', 'Team Ads'], i),
+        mktNote: pick(['Chạy ads FB', 'Lead TikTok', 'Remarketing', ''], i),
+        dataReceivedAt: new Date(2026, 5, day, 0, 0, 0, 0),
+        recording: '',
+        revenue: result === 'Phẫu thuật' ? (12 + (i % 50)) * 1_000_000 : 0,
+        highlight: false,
+      })
+      i++
     }
-  })
+  }
+  return out
 }
 
 function buildReExams(count = 84) {
