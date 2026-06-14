@@ -123,6 +123,16 @@ export async function GET(request: NextRequest) {
     const result = sp.get('result')?.trim()
     if (result) query.result = result
 
+    // Lọc theo ngày nhận data
+    const dataFrom = sp.get('dataFrom')
+    const dataTo = sp.get('dataTo')
+    if (dataFrom || dataTo) {
+      const range: Record<string, Date> = {}
+      if (dataFrom) range.$gte = new Date(dataFrom)
+      if (dataTo) range.$lte = new Date(dataTo)
+      query.dataReceivedAt = range
+    }
+
     const view = sp.get('view')
     const from = sp.get('from')
     const to = sp.get('to')

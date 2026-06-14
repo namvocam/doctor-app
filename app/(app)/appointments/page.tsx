@@ -245,6 +245,8 @@ function AppointmentsClient() {
     result: '',
     from: '',
     to: '',
+    dataFrom: '',
+    dataTo: '',
   })
   const [month, setMonth] = useState(currentMonth) // YYYY-MM, dùng cho chế độ "theo tháng"
   const [showFilter, setShowFilter] = useState(false) // mặc định thu gọn bộ lọc
@@ -315,6 +317,8 @@ function AppointmentsClient() {
       if (f.quote) p.set('quote', f.quote)
       if (f.source) p.set('source', f.source)
       if (f.result) p.set('result', f.result)
+      if (f.dataFrom) p.set('dataFrom', new Date(`${f.dataFrom}T00:00:00`).toISOString())
+      if (f.dataTo) p.set('dataTo', new Date(`${f.dataTo}T23:59:59.999`).toISOString())
 
       if (isToday) {
         // pageArg = ngày trong tháng; lấy toàn bộ lịch hẹn của riêng ngày đó
@@ -368,7 +372,7 @@ function AppointmentsClient() {
     fetchData(filters, p, month)
   }
   const EMPTY_FILTERS = {
-    q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '',
+    q: '', age: '', province: '', service: '', quote: '', source: '', result: '', from: '', to: '', dataFrom: '', dataTo: '',
   }
   function handleReset() {
     // Chỉ xoá các input bộ lọc; KHÔNG gọi API (phải bấm "Tìm kiếm" mới lấy kết quả)
@@ -537,6 +541,22 @@ function AppointmentsClient() {
                     type="date"
                     value={filters.to}
                     onChange={(e) => setFilters({ ...filters, to: e.target.value })}
+                    className="input"
+                  />
+                </Field>
+                <Field label="Từ ngày nhận data">
+                  <input
+                    type="date"
+                    value={filters.dataFrom}
+                    onChange={(e) => setFilters({ ...filters, dataFrom: e.target.value })}
+                    className="input"
+                  />
+                </Field>
+                <Field label="Đến ngày nhận data">
+                  <input
+                    type="date"
+                    value={filters.dataTo}
+                    onChange={(e) => setFilters({ ...filters, dataTo: e.target.value })}
                     className="input"
                   />
                 </Field>
