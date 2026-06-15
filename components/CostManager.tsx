@@ -320,10 +320,6 @@ function CostFormModal({
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-gray-400">
-        Mỗi nhóm chỉ có 1 bản ghi cho mỗi ngày — nhập lại cùng nhóm &amp; ngày sẽ ghi đè. &quot;Khách fail
-        tại cơ sở&quot; và &quot;Ca fail bác sĩ từ chối&quot; tự suy từ Lịch hẹn, không nhập ở đây.
-      </p>
     </Modal>
   )
 }
