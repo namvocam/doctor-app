@@ -140,7 +140,9 @@ export default function CostManager() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">{money(Number(c.revenue) || 0)}</td>
-                  <td className="px-4 py-3 text-right">{money(Number(c.totalCost) || 0)}</td>
+                  <td className="px-4 py-3 text-right">
+                    {money((Number(c.groupCost) || 0) + (Number(c.budget) || 0) + (Number(c.roomCostND) || 0))}
+                  </td>
                   <td className="px-4 py-3 text-right">{money(Number(c.budget) || 0)}</td>
                   <td className="px-4 py-3 text-right">{Number(c.totalPhone) || 0}</td>
                   <td className="px-4 py-3">

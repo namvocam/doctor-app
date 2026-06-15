@@ -15,8 +15,8 @@ import {
 import { formatNumber } from '@/lib/format'
 import { COST_INPUT_FIELDS } from '@/lib/leadReport'
 
-/** Các ô số thô từ API: kế toán nhập (17) + 2 cột suy từ lịch hẹn. */
-const RAW_FIELDS = [...COST_INPUT_FIELDS, 'failAtSite', 'failDoctorReject'] as const
+/** Các ô số thô từ API (18 ô kế toán nhập). */
+const RAW_FIELDS = COST_INPUT_FIELDS
 
 /** Số liệu tổng (chỉ gồm số). Dòng ngày dùng ReportRow (có thêm `date`). */
 type Metrics = Record<string, number>
@@ -42,53 +42,55 @@ const num = (n: number) => formatNumber(n)
 const pct = (a: number, b: number) => (b > 0 ? `${parseFloat(((a / b) * 100).toFixed(2))}%` : '0%')
 const div = (a: number, b: number) => (b > 0 ? a / b : 0)
 
-// 3 cột tự suy
-const roomCostND = (m: M) => g(m, 'totalCost') - g(m, 'budget') - g(m, 'groupCost')
-const surgeryCount = (m: M) => g(m, 'surgeryDepositThisMonth') + g(m, 'surgeryDepositOldMonth')
-const bookCumulative = (m: M) => g(m, 'bookTN') + g(m, 'bookOldData')
+// Các cột tự tính (theo công thức ID)
+const totalCost = (m: M) => g(m, 'groupCost') + g(m, 'budget') + g(m, 'roomCostND') // 7 = 8+9+11
+const depositAndService = (m: M) =>
+  g(m, 'newCustomerAtSite') - g(m, 'failAtSite') + g(m, 'failReclose') // 24.1 = 24-26+26.1
+const surgeryOldMonth = (m: M) => g(m, 'surgeryCount') - g(m, 'surgeryDepositThisMonth') // 25.2 = 25-25.1
+const bookCumulative = (m: M) => g(m, 'bookTN') + g(m, 'bookOldData') // 21 = 19+20
 
 /** Hàm tính giá trị hiển thị cho từng cột (áp dụng cho cả dòng ngày lẫn TỔNG). */
 const VALUE: Record<string, (m: M) => React.ReactNode> = {
-  revenue: (m) => money(g(m, 'revenue')),
-  totalCost: (m) => money(g(m, 'totalCost')),
-  groupCost: (m) => money(g(m, 'groupCost')),
-  budget: (m) => money(g(m, 'budget')),
-  costRevenueRatio: (m) => pct(g(m, 'totalCost'), g(m, 'revenue')),
-  closeRate: (m) => pct(g(m, 'depositAndService'), g(m, 'totalPhone')),
-  realPassRate: (m) => pct(g(m, 'newCustomerAtSite'), g(m, 'totalPhone')),
-  bookRateTN: (m) => pct(g(m, 'bookTN'), g(m, 'totalPhone')),
-  bookRateCumulative: (m) => pct(bookCumulative(m), g(m, 'totalPhone')),
-  avgInvoicePerServiceCustomer: (m) => money(div(g(m, 'revenue'), surgeryCount(m))),
-  roomCostND: (m) => money(roomCostND(m)),
-  messData: (m) => num(g(m, 'messData')),
-  messSpam: (m) => num(g(m, 'messSpam')),
-  totalPhone: (m) => num(g(m, 'totalPhone')),
-  phoneReached: (m) => num(g(m, 'phoneReached')),
-  reachRate: (m) => pct(g(m, 'phoneReached'), g(m, 'totalPhone')),
-  costPerMess: (m) => money(div(g(m, 'totalCost'), g(m, 'messData'))),
-  costPerPhone: (m) => money(div(g(m, 'totalCost'), g(m, 'totalPhone'))),
-  phoneAskRate: (m) => pct(g(m, 'totalPhone'), g(m, 'messData')),
-  bookTN: (m) => num(g(m, 'bookTN')),
-  bookOldData: (m) => num(g(m, 'bookOldData')),
-  bookCumulative: (m) => num(bookCumulative(m)),
-  bookRedirect: (m) => num(g(m, 'bookRedirect')),
-  costPerBookTN: (m) => money(div(g(m, 'totalCost'), g(m, 'bookTN'))),
-  costPerBookCumulative: (m) => money(div(g(m, 'totalCost'), bookCumulative(m))),
-  newCustomerAtSite: (m) => num(g(m, 'newCustomerAtSite')),
-  depositAndService: (m) => num(g(m, 'depositAndService')),
-  surgeryCount: (m) => num(surgeryCount(m)),
-  surgeryDepositThisMonth: (m) => num(g(m, 'surgeryDepositThisMonth')),
-  surgeryDepositOldMonth: (m) => num(g(m, 'surgeryDepositOldMonth')),
-  failAtSite: (m) => num(g(m, 'failAtSite')),
-  failReclose: (m) => num(g(m, 'failReclose')),
-  failDoctorReject: (m) => num(g(m, 'failDoctorReject')),
-  failRateAtSite: (m) => pct(g(m, 'failAtSite'), g(m, 'newCustomerAtSite')),
-  realPassPerCloseRate: (m) => pct(g(m, 'newCustomerAtSite'), bookCumulative(m)),
-  mktCostPerCustomerToSite: (m) => money(div(g(m, 'totalCost'), g(m, 'newCustomerAtSite'))),
-  mktCostPerCustomerService: (m) => money(div(g(m, 'totalCost'), g(m, 'depositAndService'))),
-  invoicePerVisit: (m) => money(div(g(m, 'revenue'), g(m, 'newCustomerAtSite'))),
-  hardReachData1: (m) => num(g(m, 'hardReachData1')),
-  hardReachRate: (m) => pct(g(m, 'hardReachData1'), g(m, 'totalPhone')),
+  revenue: (m) => money(g(m, 'revenue')), // 1
+  totalCost: (m) => money(totalCost(m)), // 7 = 8+9+11
+  groupCost: (m) => money(g(m, 'groupCost')), // 8
+  budget: (m) => money(g(m, 'budget')), // 9
+  costRevenueRatio: (m) => pct(totalCost(m), g(m, 'revenue')), // 2 = 7/1
+  closeRate: (m) => pct(depositAndService(m), g(m, 'totalPhone')), // 3 = (24-26+26.1)/13
+  realPassRate: (m) => pct(g(m, 'newCustomerAtSite'), g(m, 'totalPhone')), // 4 = 24/13
+  bookRateTN: (m) => pct(g(m, 'bookTN'), g(m, 'totalPhone')), // 5 = 19/13
+  bookRateCumulative: (m) => pct(bookCumulative(m), g(m, 'totalPhone')), // 6 = 21/13
+  avgInvoicePerServiceCustomer: (m) => money(div(g(m, 'revenue'), g(m, 'surgeryCount'))), // 6.1 = 1/25
+  roomCostND: (m) => money(g(m, 'roomCostND')), // 11 (nhập)
+  messData: (m) => num(g(m, 'messData')), // 12a
+  messSpam: (m) => num(g(m, 'messSpam')), // 12b
+  totalPhone: (m) => num(g(m, 'totalPhone')), // 13
+  phoneReached: (m) => num(g(m, 'phoneReached')), // 14
+  reachRate: (m) => pct(g(m, 'phoneReached'), g(m, 'totalPhone')), // 15 = 14/13
+  costPerMess: (m) => money(div(totalCost(m), g(m, 'messData'))), // 16 = 7/12a
+  costPerPhone: (m) => money(div(totalCost(m), g(m, 'totalPhone'))), // 17 = 7/13
+  phoneAskRate: (m) => pct(g(m, 'totalPhone'), g(m, 'messData')), // 18 = 13/12a
+  bookTN: (m) => num(g(m, 'bookTN')), // 19
+  bookOldData: (m) => num(g(m, 'bookOldData')), // 20
+  bookCumulative: (m) => num(bookCumulative(m)), // 21 = 19+20
+  bookRedirect: (m) => num(g(m, 'bookRedirect')), // 21.1
+  costPerBookTN: (m) => money(div(totalCost(m), g(m, 'bookTN'))), // 22 = 7/19
+  costPerBookCumulative: (m) => money(div(totalCost(m), bookCumulative(m))), // 23 = 7/21
+  newCustomerAtSite: (m) => num(g(m, 'newCustomerAtSite')), // 24
+  depositAndService: (m) => num(depositAndService(m)), // 24.1 = 24-26+26.1
+  surgeryCount: (m) => num(g(m, 'surgeryCount')), // 25 (nhập)
+  surgeryDepositThisMonth: (m) => num(g(m, 'surgeryDepositThisMonth')), // 25.1
+  surgeryDepositOldMonth: (m) => num(surgeryOldMonth(m)), // 25.2 = 25-25.1
+  failAtSite: (m) => num(g(m, 'failAtSite')), // 26 (nhập)
+  failReclose: (m) => num(g(m, 'failReclose')), // 26.1
+  failDoctorReject: (m) => num(g(m, 'failDoctorReject')), // 27 (nhập)
+  failRateAtSite: (m) => pct(g(m, 'failAtSite') - g(m, 'failReclose'), g(m, 'newCustomerAtSite')), // 28 = (26-26.1)/24
+  realPassPerCloseRate: (m) => pct(g(m, 'newCustomerAtSite'), bookCumulative(m)), // 29 = 24/21
+  mktCostPerCustomerToSite: (m) => money(div(totalCost(m), g(m, 'newCustomerAtSite'))), // 30 = 7/24
+  mktCostPerCustomerService: (m) => money(div(totalCost(m), depositAndService(m))), // 31 = 7/24.1
+  invoicePerVisit: (m) => money(div(g(m, 'revenue'), g(m, 'newCustomerAtSite'))), // 32 = 1/24
+  hardReachData1: (m) => num(g(m, 'hardReachData1')), // 33
+  hardReachRate: (m) => pct(g(m, 'hardReachData1'), g(m, 'totalPhone')), // 34 = 33/13
 }
 
 /** Thứ tự & nhãn 40 cột dữ liệu (ngoài STT & Ngày nhập). */
@@ -279,11 +281,11 @@ export default function LeadReport({ role, title }: { role: string; title: strin
           </h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <Stat label="Doanh thu" value={money(g(totals, 'revenue'))} valueClass="text-gray-900" />
-            <Stat label="Tổng chi phí" value={money(g(totals, 'totalCost'))} valueClass="text-red-600" />
+            <Stat label="Tổng chi phí" value={money(totalCost(totals))} valueClass="text-red-600" />
             <Stat label="Chi phí thuê group" value={money(g(totals, 'groupCost'))} valueClass="text-orange-600" />
             <Stat label="Ngân sách" value={money(g(totals, 'budget'))} valueClass="text-amber-600" />
-            <Stat label="Tổng chi phí / doanh thu" value={pct(g(totals, 'totalCost'), g(totals, 'revenue'))} valueClass="text-teal-600" />
-            <Stat label="Tỷ lệ chốt tổng" value={pct(g(totals, 'depositAndService'), g(totals, 'totalPhone'))} valueClass="text-green-600" />
+            <Stat label="Tổng chi phí / doanh thu" value={pct(totalCost(totals), g(totals, 'revenue'))} valueClass="text-teal-600" />
+            <Stat label="Tỷ lệ chốt tổng" value={pct(depositAndService(totals), g(totals, 'totalPhone'))} valueClass="text-green-600" />
           </div>
         </div>
 
