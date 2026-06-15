@@ -12,7 +12,7 @@ import {
   ChevronDown,
   Loader2,
 } from 'lucide-react'
-import { formatCurrency, formatNumber } from '@/lib/format'
+import { formatNumber } from '@/lib/format'
 import { COST_INPUT_FIELDS } from '@/lib/leadReport'
 
 /** Các ô số thô từ API: kế toán nhập (17) + 2 cột suy từ lịch hẹn. */
@@ -35,7 +35,8 @@ const g = (m: M, k: string): number => {
   const v = m[k]
   return typeof v === 'number' && Number.isFinite(v) ? v : 0
 }
-const money = (n: number) => formatCurrency(Math.round(n))
+// 0 -> '0 ₫' (không hiện '-'), khớp data mẫu hiển thị 0đ
+const money = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} ₫`
 const num = (n: number) => formatNumber(n)
 // Làm tròn tối đa 2 chữ số thập phân, bỏ số 0 thừa: 25.00->25, 87.10->87.1
 const pct = (a: number, b: number) => (b > 0 ? `${parseFloat(((a / b) * 100).toFixed(2))}%` : '0%')
@@ -277,10 +278,10 @@ export default function LeadReport({ role, title }: { role: string; title: strin
             <BarChart3 className="h-4 w-4" /> Thống kê nhanh
           </h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <Stat label="Doanh thu" value={formatCurrency(totals.revenue)} valueClass="text-gray-900" />
-            <Stat label="Tổng chi phí" value={formatCurrency(totals.totalCost)} valueClass="text-red-600" />
-            <Stat label="Chi phí thuê group" value={formatCurrency(totals.groupCost)} valueClass="text-orange-600" />
-            <Stat label="Ngân sách" value={formatCurrency(totals.budget)} valueClass="text-amber-600" />
+            <Stat label="Doanh thu" value={money(g(totals, 'revenue'))} valueClass="text-gray-900" />
+            <Stat label="Tổng chi phí" value={money(g(totals, 'totalCost'))} valueClass="text-red-600" />
+            <Stat label="Chi phí thuê group" value={money(g(totals, 'groupCost'))} valueClass="text-orange-600" />
+            <Stat label="Ngân sách" value={money(g(totals, 'budget'))} valueClass="text-amber-600" />
             <Stat label="Tổng chi phí / doanh thu" value={pct(g(totals, 'totalCost'), g(totals, 'revenue'))} valueClass="text-teal-600" />
             <Stat label="Tỷ lệ chốt tổng" value={pct(g(totals, 'depositAndService'), g(totals, 'totalPhone'))} valueClass="text-green-600" />
           </div>

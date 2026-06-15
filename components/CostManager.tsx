@@ -12,7 +12,7 @@ import {
   COST_FIELD_LABELS,
   dateKeyToYmd,
 } from '@/lib/leadReport'
-import { formatCurrency, formatDateVN } from '@/lib/format'
+import { formatDateVN } from '@/lib/format'
 
 interface CostItem {
   _id: string
@@ -35,6 +35,9 @@ const formatThousand = (raw: string) => {
   const digits = raw.replace(/\D/g, '')
   return digits ? Number(digits).toLocaleString('vi-VN') : ''
 }
+
+/** Tiền: 0 -> '0 ₫' (không hiện '-'). */
+const money = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} ₫`
 
 const roleLabel = (r: string) => LEAD_ROLE_LABELS[r as keyof typeof LEAD_ROLE_LABELS] ?? r
 
@@ -136,9 +139,9 @@ export default function CostManager() {
                       {roleLabel(c.leadRole)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.revenue) || 0)}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.totalCost) || 0)}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.budget) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{money(Number(c.revenue) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{money(Number(c.totalCost) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{money(Number(c.budget) || 0)}</td>
                   <td className="px-4 py-3 text-right">{Number(c.totalPhone) || 0}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
