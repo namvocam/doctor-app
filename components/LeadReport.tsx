@@ -12,107 +12,139 @@ import {
   ChevronDown,
   Loader2,
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatNumber } from '@/lib/format'
+import { COST_INPUT_FIELDS } from '@/lib/leadReport'
 
+/** Các ô số thô từ API: kế toán nhập (17) + 2 cột suy từ lịch hẹn. */
+const RAW_FIELDS = [...COST_INPUT_FIELDS, 'failAtSite', 'failDoctorReject'] as const
+
+/** Số liệu tổng (chỉ gồm số). Dòng ngày dùng ReportRow (có thêm `date`). */
+type Metrics = Record<string, number>
 interface ReportRow {
   date: string
-  revenue: number
-  count: number
-  totalCost: number
-  groupCost: number
-  budget: number
+  [key: string]: number | string
+}
+/** Kiểu tham số cho hàm tính: nhận cả ReportRow lẫn Metrics. */
+type M = Record<string, unknown>
+
+const EMPTY_METRICS: Metrics = {}
+for (const k of RAW_FIELDS) EMPTY_METRICS[k] = 0
+
+/* ---- Format & công thức ---- */
+const g = (m: M, k: string): number => {
+  const v = m[k]
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0
+}
+const money = (n: number) => formatCurrency(Math.round(n))
+const num = (n: number) => formatNumber(n)
+// Làm tròn tối đa 2 chữ số thập phân, bỏ số 0 thừa: 25.00->25, 87.10->87.1
+const pct = (a: number, b: number) => (b > 0 ? `${parseFloat(((a / b) * 100).toFixed(2))}%` : '0%')
+const div = (a: number, b: number) => (b > 0 ? a / b : 0)
+
+// 3 cột tự suy
+const roomCostND = (m: M) => g(m, 'totalCost') - g(m, 'budget') - g(m, 'groupCost')
+const surgeryCount = (m: M) => g(m, 'surgeryDepositThisMonth') + g(m, 'surgeryDepositOldMonth')
+const bookCumulative = (m: M) => g(m, 'bookTN') + g(m, 'bookOldData')
+
+/** Hàm tính giá trị hiển thị cho từng cột (áp dụng cho cả dòng ngày lẫn TỔNG). */
+const VALUE: Record<string, (m: M) => React.ReactNode> = {
+  revenue: (m) => money(g(m, 'revenue')),
+  totalCost: (m) => money(g(m, 'totalCost')),
+  groupCost: (m) => money(g(m, 'groupCost')),
+  budget: (m) => money(g(m, 'budget')),
+  costRevenueRatio: (m) => pct(g(m, 'totalCost'), g(m, 'revenue')),
+  closeRate: (m) => pct(g(m, 'depositAndService'), g(m, 'totalPhone')),
+  realPassRate: (m) => pct(g(m, 'newCustomerAtSite'), g(m, 'totalPhone')),
+  bookRateTN: (m) => pct(g(m, 'bookTN'), g(m, 'totalPhone')),
+  bookRateCumulative: (m) => pct(bookCumulative(m), g(m, 'totalPhone')),
+  avgInvoicePerServiceCustomer: (m) => money(div(g(m, 'revenue'), surgeryCount(m))),
+  roomCostND: (m) => money(roomCostND(m)),
+  messData: (m) => num(g(m, 'messData')),
+  messSpam: (m) => num(g(m, 'messSpam')),
+  totalPhone: (m) => num(g(m, 'totalPhone')),
+  phoneReached: (m) => num(g(m, 'phoneReached')),
+  reachRate: (m) => pct(g(m, 'phoneReached'), g(m, 'totalPhone')),
+  costPerMess: (m) => money(div(g(m, 'totalCost'), g(m, 'messData'))),
+  costPerPhone: (m) => money(div(g(m, 'totalCost'), g(m, 'totalPhone'))),
+  phoneAskRate: (m) => pct(g(m, 'totalPhone'), g(m, 'messData')),
+  bookTN: (m) => num(g(m, 'bookTN')),
+  bookOldData: (m) => num(g(m, 'bookOldData')),
+  bookCumulative: (m) => num(bookCumulative(m)),
+  bookRedirect: (m) => num(g(m, 'bookRedirect')),
+  costPerBookTN: (m) => money(div(g(m, 'totalCost'), g(m, 'bookTN'))),
+  costPerBookCumulative: (m) => money(div(g(m, 'totalCost'), bookCumulative(m))),
+  newCustomerAtSite: (m) => num(g(m, 'newCustomerAtSite')),
+  depositAndService: (m) => num(g(m, 'depositAndService')),
+  surgeryCount: (m) => num(surgeryCount(m)),
+  surgeryDepositThisMonth: (m) => num(g(m, 'surgeryDepositThisMonth')),
+  surgeryDepositOldMonth: (m) => num(g(m, 'surgeryDepositOldMonth')),
+  failAtSite: (m) => num(g(m, 'failAtSite')),
+  failReclose: (m) => num(g(m, 'failReclose')),
+  failDoctorReject: (m) => num(g(m, 'failDoctorReject')),
+  failRateAtSite: (m) => pct(g(m, 'failAtSite'), g(m, 'newCustomerAtSite')),
+  realPassPerCloseRate: (m) => pct(g(m, 'newCustomerAtSite'), bookCumulative(m)),
+  mktCostPerCustomerToSite: (m) => money(div(g(m, 'totalCost'), g(m, 'newCustomerAtSite'))),
+  mktCostPerCustomerService: (m) => money(div(g(m, 'totalCost'), g(m, 'depositAndService'))),
+  invoicePerVisit: (m) => money(div(g(m, 'revenue'), g(m, 'newCustomerAtSite'))),
+  hardReachData1: (m) => num(g(m, 'hardReachData1')),
+  hardReachRate: (m) => pct(g(m, 'hardReachData1'), g(m, 'totalPhone')),
 }
 
-interface Totals {
-  revenue: number
-  totalCost: number
-  groupCost: number
-  budget: number
-}
+/** Thứ tự & nhãn 40 cột dữ liệu (ngoài STT & Ngày nhập). */
+const COL_DEFS: { key: string; label: string }[] = [
+  { key: 'revenue', label: 'Doanh thu' },
+  { key: 'totalCost', label: 'Tổng chi phí' },
+  { key: 'groupCost', label: 'Chi phí thuê group' },
+  { key: 'budget', label: 'Ngân sách' },
+  { key: 'costRevenueRatio', label: 'Tổng chi phí / Doanh thu (%)' },
+  { key: 'closeRate', label: 'Tỷ lệ chốt tổng' },
+  { key: 'realPassRate', label: 'Tỉ lệ khách thực qua / SĐT (%)' },
+  { key: 'bookRateTN', label: 'Tỉ lệ đặt lịch TN (%)' },
+  { key: 'bookRateCumulative', label: 'Tỉ lệ đặt lịch lũy kế' },
+  { key: 'avgInvoicePerServiceCustomer', label: 'Hóa đơn TB/Khách làm dịch vụ' },
+  { key: 'roomCostND', label: 'Chi phí phòng ND' },
+  { key: 'messData', label: 'Mess data' },
+  { key: 'messSpam', label: 'Mess rác' },
+  { key: 'totalPhone', label: 'Tổng SĐT' },
+  { key: 'phoneReached', label: 'Tổng SĐT tiếp cận' },
+  { key: 'reachRate', label: 'Tỷ lệ tiếp cận (%)' },
+  { key: 'costPerMess', label: 'Chi phí / mess' },
+  { key: 'costPerPhone', label: 'Chi phí / Số' },
+  { key: 'phoneAskRate', label: 'Tỉ lệ xin số (%)' },
+  { key: 'bookTN', label: 'Lịch đặt TN' },
+  { key: 'bookOldData', label: 'Lịch đặt từ data cũ' },
+  { key: 'bookCumulative', label: 'Lịch đặt lũy kế' },
+  { key: 'bookRedirect', label: 'Lịch đặt điều hướng' },
+  { key: 'costPerBookTN', label: 'Chi phí / lịch đặt TN' },
+  { key: 'costPerBookCumulative', label: 'Chi phí / lịch lũy kế' },
+  { key: 'newCustomerAtSite', label: 'Khách mới qua cơ sở' },
+  { key: 'depositAndService', label: 'Khách cọc và SDDV' },
+  { key: 'surgeryCount', label: 'Số ca mổ' },
+  { key: 'surgeryDepositThisMonth', label: 'Số ca mổ cọc trong tháng' },
+  { key: 'surgeryDepositOldMonth', label: 'Số ca mổ cọc tháng cũ' },
+  { key: 'failAtSite', label: 'Khách fail tại cơ sở' },
+  { key: 'failReclose', label: 'Khách fail chốt lại' },
+  { key: 'failDoctorReject', label: 'Ca fail bác sĩ từ chối' },
+  { key: 'failRateAtSite', label: 'Tỉ lệ fail tại CS (%)' },
+  { key: 'realPassPerCloseRate', label: 'Tỉ lệ khách thực qua / Lịch chốt (%)' },
+  { key: 'mktCostPerCustomerToSite', label: 'Chi phí marketing cho mỗi KH đến CS' },
+  { key: 'mktCostPerCustomerService', label: 'Chi phí marketing cho mỗi KH đến CS và thưc hiện DV' },
+  { key: 'invoicePerVisit', label: 'Hóa đơn / Khách đến' },
+  { key: 'hardReachData1', label: 'Số data lần 1 khó tiếp cận' },
+  { key: 'hardReachRate', label: 'Tỉ lệ data khó tiếp cận (%)' },
+]
 
-const EMPTY_TOTALS: Totals = { revenue: 0, totalCost: 0, groupCost: 0, budget: 0 }
-
-/** Tỷ lệ phần trăm an toàn (mẫu số 0 -> 0%). */
-const pct = (num: number, den: number) => (den > 0 ? `${Math.round((num / den) * 100)}%` : '0%')
-
-/** Cột dữ liệu (ngoài STT & Ngày nhập). Có số liệu thật: Doanh thu, Tổng chi phí,
- *  Chi phí thuê group, Ngân sách, Tổng chi phí/Doanh thu (%). Các cột còn lại là
- *  placeholder 0đ/0%/0 (chưa có nguồn dữ liệu). */
 interface ReportColumn {
   key: string
   label: string
-  render: (row: ReportRow) => React.ReactNode
-  totalRender: (totals: Totals) => React.ReactNode
+  value: (m: M) => React.ReactNode
 }
 
-type ColType = 'currency' | 'percent' | 'number'
-const zeroOf = (t: ColType) => (t === 'currency' ? '0đ' : t === 'percent' ? '0%' : '0')
-
-/** Cột có dữ liệu thật từ API (doanh thu + chi phí kế toán nhập). */
-const REAL_COLUMNS: Record<
-  string,
-  { render: (r: ReportRow) => React.ReactNode; totalRender: (t: Totals) => React.ReactNode }
-> = {
-  revenue: { render: (r) => formatCurrency(r.revenue), totalRender: (t) => formatCurrency(t.revenue) },
-  totalCost: { render: (r) => formatCurrency(r.totalCost), totalRender: (t) => formatCurrency(t.totalCost) },
-  groupCost: { render: (r) => formatCurrency(r.groupCost), totalRender: (t) => formatCurrency(t.groupCost) },
-  budget: { render: (r) => formatCurrency(r.budget), totalRender: (t) => formatCurrency(t.budget) },
-  costRevenueRatio: {
-    render: (r) => pct(r.totalCost, r.revenue),
-    totalRender: (t) => pct(t.totalCost, t.revenue),
-  },
-}
-
-/** Định nghĩa cột theo kiểu. Cột 'revenue' là cột duy nhất có dữ liệu thật. */
-const COL_DEFS: { key: string; label: string; type: ColType }[] = [
-  { key: 'revenue', label: 'Doanh thu', type: 'currency' },
-  { key: 'totalCost', label: 'Tổng chi phí', type: 'currency' },
-  { key: 'groupCost', label: 'Chi phí thuê group', type: 'currency' },
-  { key: 'budget', label: 'Ngân sách', type: 'currency' },
-  { key: 'costRevenueRatio', label: 'Tổng chi phí / Doanh thu (%)', type: 'percent' },
-  { key: 'closeRate', label: 'Tỷ lệ chốt tổng', type: 'percent' },
-  { key: 'realPassRate', label: 'Tỉ lệ khách thực qua / SĐT (%)', type: 'percent' },
-  { key: 'bookRateTN', label: 'Tỉ lệ đặt lịch TN (%)', type: 'percent' },
-  { key: 'bookRateCumulative', label: 'Tỉ lệ đặt lịch lũy kế', type: 'percent' },
-  { key: 'avgInvoicePerServiceCustomer', label: 'Hóa đơn TB/Khách làm dịch vụ', type: 'currency' },
-  { key: 'roomCostND', label: 'Chi phí phòng ND', type: 'currency' },
-  { key: 'messData', label: 'Mess data', type: 'number' },
-  { key: 'messSpam', label: 'Mess rác', type: 'number' },
-  { key: 'totalPhone', label: 'Tổng SĐT', type: 'number' },
-  { key: 'phoneReached', label: 'Tổng SĐT tiếp cận', type: 'number' },
-  { key: 'reachRate', label: 'Tỷ lệ tiếp cận (%)', type: 'percent' },
-  { key: 'costPerMess', label: 'Chi phí / mess', type: 'currency' },
-  { key: 'costPerPhone', label: 'Chi phí / Số', type: 'currency' },
-  { key: 'phoneAskRate', label: 'Tỉ lệ xin số (%)', type: 'percent' },
-  { key: 'bookTN', label: 'Lịch đặt TN', type: 'number' },
-  { key: 'bookOldData', label: 'Lịch đặt từ data cũ', type: 'number' },
-  { key: 'bookCumulative', label: 'Lịch đặt lũy kế', type: 'number' },
-  { key: 'bookRedirect', label: 'Lịch đặt điều hướng', type: 'number' },
-  { key: 'costPerBookTN', label: 'Chi phí / lịch đặt TN', type: 'currency' },
-  { key: 'costPerBookCumulative', label: 'Chi phí / lịch lũy kế', type: 'currency' },
-  { key: 'newCustomerAtSite', label: 'Khách mới qua cơ sở', type: 'number' },
-  { key: 'depositAndService', label: 'Khách cọc và SDDV', type: 'number' },
-  { key: 'surgeryCount', label: 'Số ca mổ', type: 'number' },
-  { key: 'surgeryDepositThisMonth', label: 'Số ca mổ cọc trong tháng', type: 'number' },
-  { key: 'surgeryDepositOldMonth', label: 'Số ca mổ cọc tháng cũ', type: 'number' },
-  { key: 'failAtSite', label: 'Khách fail tại cơ sở', type: 'number' },
-  { key: 'failReclose', label: 'Khách fail chốt lại', type: 'number' },
-  { key: 'failDoctorReject', label: 'Ca fail bác sĩ từ chối', type: 'number' },
-  { key: 'failRateAtSite', label: 'Tỉ lệ fail tại CS (%)', type: 'percent' },
-  { key: 'realPassPerCloseRate', label: 'Tỉ lệ khách thực qua / Lịch chốt (%)', type: 'percent' },
-  { key: 'mktCostPerCustomerToSite', label: 'Chi phí marketing cho mỗi KH đến CS', type: 'currency' },
-  { key: 'mktCostPerCustomerService', label: 'Chi phí marketing cho mỗi KH đến CS và thưc hiện DV', type: 'currency' },
-  { key: 'invoicePerVisit', label: 'Hóa đơn / Khách đến', type: 'currency' },
-  { key: 'hardReachData1', label: 'Số data lần 1 khó tiếp cận', type: 'number' },
-  { key: 'hardReachRate', label: 'Tỉ lệ data khó tiếp cận (%)', type: 'percent' },
-]
-
-const COLUMNS: ReportColumn[] = COL_DEFS.map((c) => {
-  const real = REAL_COLUMNS[c.key]
-  return real
-    ? { key: c.key, label: c.label, render: real.render, totalRender: real.totalRender }
-    : { key: c.key, label: c.label, render: () => zeroOf(c.type), totalRender: () => zeroOf(c.type) }
-})
+const COLUMNS: ReportColumn[] = COL_DEFS.map((c) => ({
+  key: c.key,
+  label: c.label,
+  value: VALUE[c.key] ?? (() => '-'),
+}))
 
 function defaultVisible(): Record<string, boolean> {
   return Object.fromEntries(COLUMNS.map((c) => [c.key, true]))
@@ -120,7 +152,7 @@ function defaultVisible(): Record<string, boolean> {
 
 export default function LeadReport({ role, title }: { role: string; title: string }) {
   const [rows, setRows] = useState<ReportRow[]>([])
-  const [totals, setTotals] = useState<Totals>(EMPTY_TOTALS)
+  const [totals, setTotals] = useState<Metrics>(EMPTY_METRICS)
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ from: '', to: '' })
 
@@ -150,7 +182,7 @@ export default function LeadReport({ role, title }: { role: string; title: strin
         const res = await fetch(`/api/lead-report?${p.toString()}`)
         const json = await res.json()
         setRows(json.rows ?? [])
-        setTotals(json.totals ?? EMPTY_TOTALS)
+        setTotals(json.totals ?? EMPTY_METRICS)
       } finally {
         setLoading(false)
       }
@@ -249,8 +281,8 @@ export default function LeadReport({ role, title }: { role: string; title: strin
             <Stat label="Tổng chi phí" value={formatCurrency(totals.totalCost)} valueClass="text-red-600" />
             <Stat label="Chi phí thuê group" value={formatCurrency(totals.groupCost)} valueClass="text-orange-600" />
             <Stat label="Ngân sách" value={formatCurrency(totals.budget)} valueClass="text-amber-600" />
-            <Stat label="Tổng chi phí / doanh thu" value={pct(totals.totalCost, totals.revenue)} valueClass="text-teal-600" />
-            <Stat label="Tỷ lệ chốt tổng" value="0%" valueClass="text-green-600" />
+            <Stat label="Tổng chi phí / doanh thu" value={pct(g(totals, 'totalCost'), g(totals, 'revenue'))} valueClass="text-teal-600" />
+            <Stat label="Tỷ lệ chốt tổng" value={pct(g(totals, 'depositAndService'), g(totals, 'totalPhone'))} valueClass="text-green-600" />
           </div>
         </div>
 
@@ -339,14 +371,14 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                     <Td />
                     {visibleColumns.map((c) => (
                       <Td key={c.key} className="text-center">
-                        {c.totalRender(totals)}
+                        {c.value(totals)}
                       </Td>
                     ))}
                   </tr>
                   {rows.length === 0 ? (
                     <tr>
                       <td colSpan={colCount} className="py-10 text-center text-gray-400">
-                        Không có dữ liệu doanh thu.
+                        Không có dữ liệu.
                       </td>
                     </tr>
                   ) : (
@@ -356,7 +388,7 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                         <Td className="whitespace-nowrap text-center">{r.date}</Td>
                         {visibleColumns.map((c) => (
                           <Td key={c.key} className="text-center">
-                            {c.render(r)}
+                            {c.value(r)}
                           </Td>
                         ))}
                       </tr>

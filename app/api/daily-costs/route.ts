@@ -3,11 +3,11 @@ import { connectToDatabase } from '@/lib/mongodb'
 import DailyCostModel from '@/models/DailyCost'
 import { getCurrentUser } from '@/lib/session'
 import { canManageCosts } from '@/lib/permissions'
-import { LEAD_ROLES, ymdToDateKey, type LeadRole } from '@/lib/leadReport'
+import { LEAD_ROLES, COST_INPUT_FIELDS, ymdToDateKey, type LeadRole } from '@/lib/leadReport'
 
 export const dynamic = 'force-dynamic'
 
-// Danh sách chi phí theo ngày (lọc theo nhóm & khoảng ngày) - mọi user đã đăng nhập.
+// Danh sách số liệu theo ngày (lọc theo nhóm & khoảng ngày) - mọi user đã đăng nhập.
 export async function GET(request: NextRequest) {
   try {
     if (!(await getCurrentUser())) {
@@ -40,23 +40,24 @@ export async function GET(request: NextRequest) {
 
     const costs = await DailyCostModel.find(query).sort({ date: -1 }).lean()
     return NextResponse.json({
-      data: costs.map((c) => ({
-        _id: String(c._id),
-        leadRole: c.leadRole,
-        date: c.date,
-        dateKey: c.dateKey,
-        totalCost: c.totalCost ?? 0,
-        groupCost: c.groupCost ?? 0,
-        budget: c.budget ?? 0,
-      })),
+      data: costs.map((c) => {
+        const row: Record<string, unknown> = {
+          _id: String(c._id),
+          leadRole: c.leadRole,
+          date: c.date,
+          dateKey: c.dateKey,
+        }
+        for (const k of COST_INPUT_FIELDS) row[k] = (c as Record<string, unknown>)[k] ?? 0
+        return row
+      }),
     })
   } catch (error) {
     console.error('GET /api/daily-costs error:', error)
-    return NextResponse.json({ error: 'Không thể tải chi phí' }, { status: 500 })
+    return NextResponse.json({ error: 'Không thể tải số liệu' }, { status: 500 })
   }
 }
 
-// Tạo/cập nhật chi phí cho 1 (nhóm, ngày) - chỉ admin & kế toán.
+// Tạo/cập nhật số liệu cho 1 (nhóm, ngày) - chỉ admin & kế toán.
 export async function POST(request: NextRequest) {
   try {
     const me = await getCurrentUser()
@@ -81,24 +82,24 @@ export async function POST(request: NextRequest) {
       return Number.isFinite(n) && n >= 0 ? n : 0
     }
 
+    const update: Record<string, unknown> = {
+      leadRole,
+      dateKey,
+      date: new Date(ymd),
+      createdBy: me.userId,
+    }
+    for (const k of COST_INPUT_FIELDS) update[k] = toNum(body[k])
+
     await connectToDatabase()
     const doc = await DailyCostModel.findOneAndUpdate(
       { leadRole, dateKey },
-      {
-        leadRole,
-        dateKey,
-        date: new Date(ymd),
-        totalCost: toNum(body.totalCost),
-        groupCost: toNum(body.groupCost),
-        budget: toNum(body.budget),
-        createdBy: me.userId,
-      },
+      update,
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean()
 
     return NextResponse.json({ data: doc }, { status: 201 })
   } catch (error) {
     console.error('POST /api/daily-costs error:', error)
-    return NextResponse.json({ error: 'Không thể lưu chi phí' }, { status: 400 })
+    return NextResponse.json({ error: 'Không thể lưu số liệu' }, { status: 400 })
   }
 }

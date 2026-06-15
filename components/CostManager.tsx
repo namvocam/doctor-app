@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Wallet, Save, Loader2, Check, Trash2, Pencil, RotateCcw } from 'lucide-react'
 import Modal from '@/components/Modal'
-import { LEAD_ROLES, LEAD_ROLE_LABELS, dateKeyToYmd } from '@/lib/leadReport'
+import {
+  LEAD_ROLES,
+  LEAD_ROLE_LABELS,
+  COST_MONEY_FIELDS,
+  COST_COUNT_FIELDS,
+  COST_INPUT_FIELDS,
+  COST_FIELD_LABELS,
+  dateKeyToYmd,
+} from '@/lib/leadReport'
 import { formatCurrency, formatDateVN } from '@/lib/format'
 
 interface CostItem {
@@ -11,32 +19,26 @@ interface CostItem {
   leadRole: string
   date: string
   dateKey: string
-  totalCost: number
-  groupCost: number
-  budget: number
+  [key: string]: number | string
 }
 
-interface FormState {
-  leadRole: string
-  date: string
-  totalCost: string
-  groupCost: string
-  budget: string
+type Values = Record<string, string>
+
+const emptyValues = (): Values => {
+  const o: Values = {}
+  for (const k of COST_INPUT_FIELDS) o[k] = ''
+  return o
 }
 
-const emptyForm = (): FormState => ({
-  leadRole: LEAD_ROLES[0],
-  date: '',
-  totalCost: '',
-  groupCost: '',
-  budget: '',
-})
+const roleLabel = (r: string) => LEAD_ROLE_LABELS[r as keyof typeof LEAD_ROLE_LABELS] ?? r
 
 export default function CostManager() {
   const [items, setItems] = useState<CostItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState<string>('all')
-  const [form, setForm] = useState<FormState>(emptyForm)
+  const [leadRole, setLeadRole] = useState<string>(LEAD_ROLES[0])
+  const [date, setDate] = useState('')
+  const [values, setValues] = useState<Values>(emptyValues)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -59,41 +61,40 @@ export default function CostManager() {
   }, [load, filterRole])
 
   function resetForm() {
-    setForm(emptyForm())
+    setLeadRole(LEAD_ROLES[0])
+    setDate('')
+    setValues(emptyValues())
     setEditingId(null)
     setError('')
   }
 
   function editFrom(item: CostItem) {
-    setForm({
-      leadRole: item.leadRole,
-      date: dateKeyToYmd(item.dateKey),
-      totalCost: String(item.totalCost ?? 0),
-      groupCost: String(item.groupCost ?? 0),
-      budget: String(item.budget ?? 0),
-    })
+    setLeadRole(item.leadRole)
+    setDate(dateKeyToYmd(item.dateKey))
+    const v: Values = {}
+    for (const k of COST_INPUT_FIELDS) v[k] = String(item[k] ?? 0)
+    setValues(v)
     setEditingId(item._id)
     setError('')
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const setVal = (k: string, v: string) => setValues((prev) => ({ ...prev, [k]: v }))
+
   async function save() {
-    if (!form.date) {
+    if (!date) {
       setError('Vui lòng chọn ngày nhập')
       return
     }
     setSaving(true)
     setError('')
     try {
+      const body: Record<string, unknown> = { leadRole, date }
+      for (const k of COST_INPUT_FIELDS) body[k] = Number(values[k]) || 0
       const res = await fetch('/api/daily-costs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leadRole: form.leadRole,
-          date: form.date,
-          totalCost: Number(form.totalCost) || 0,
-          groupCost: Number(form.groupCost) || 0,
-          budget: Number(form.budget) || 0,
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const j = await res.json()
@@ -112,21 +113,18 @@ export default function CostManager() {
   return (
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-xl font-bold text-gray-800">
-        <Wallet className="h-6 w-6 text-brand" /> Nhập chi phí theo ngày
+        <Wallet className="h-6 w-6 text-brand" /> Nhập số liệu theo ngày
       </h1>
 
       {/* Form nhập */}
       <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-brand">
-          {editingId ? 'Cập nhật chi phí' : 'Thêm chi phí'}
+          {editingId ? 'Cập nhật số liệu' : 'Thêm số liệu'}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Nhóm">
-            <select
-              className="input"
-              value={form.leadRole}
-              onChange={(e) => setForm({ ...form, leadRole: e.target.value })}
-            >
+            <select className="input" value={leadRole} onChange={(e) => setLeadRole(e.target.value)}>
               {LEAD_ROLES.map((r) => (
                 <option key={r} value={r}>
                   {LEAD_ROLE_LABELS[r]}
@@ -135,41 +133,44 @@ export default function CostManager() {
             </select>
           </Field>
           <Field label="Ngày nhập">
-            <input
-              type="date"
-              className="input"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-            />
-          </Field>
-          <Field label="Tổng chi phí (₫)">
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={form.totalCost}
-              onChange={(e) => setForm({ ...form, totalCost: e.target.value })}
-            />
-          </Field>
-          <Field label="Chi phí thuê group (₫)">
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={form.groupCost}
-              onChange={(e) => setForm({ ...form, groupCost: e.target.value })}
-            />
-          </Field>
-          <Field label="Ngân sách (₫)">
-            <input
-              type="number"
-              min={0}
-              className="input"
-              value={form.budget}
-              onChange={(e) => setForm({ ...form, budget: e.target.value })}
-            />
+            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
         </div>
+
+        <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
+          Doanh thu &amp; chi phí (₫)
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {COST_MONEY_FIELDS.map((k) => (
+            <Field key={k} label={COST_FIELD_LABELS[k]}>
+              <input
+                type="number"
+                min={0}
+                className="input"
+                value={values[k]}
+                onChange={(e) => setVal(k, e.target.value)}
+              />
+            </Field>
+          ))}
+        </div>
+
+        <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
+          Số đếm vận hành
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {COST_COUNT_FIELDS.map((k) => (
+            <Field key={k} label={COST_FIELD_LABELS[k]}>
+              <input
+                type="number"
+                min={0}
+                className="input"
+                value={values[k]}
+                onChange={(e) => setVal(k, e.target.value)}
+              />
+            </Field>
+          ))}
+        </div>
+
         <div className="mt-4 flex items-center justify-end gap-2">
           {error && <span className="mr-auto text-sm text-red-600">{error}</span>}
           {editingId && (
@@ -190,18 +191,15 @@ export default function CostManager() {
           </button>
         </div>
         <p className="mt-2 text-xs text-gray-400">
-          Mỗi nhóm chỉ có 1 bản ghi cho mỗi ngày — nhập lại cùng nhóm &amp; ngày sẽ ghi đè.
+          Mỗi nhóm chỉ có 1 bản ghi cho mỗi ngày — nhập lại cùng nhóm &amp; ngày sẽ ghi đè. &quot;Khách
+          fail tại cơ sở&quot; và &quot;Ca fail bác sĩ từ chối&quot; tự suy từ Lịch hẹn, không nhập ở đây.
         </p>
       </div>
 
       {/* Bộ lọc nhóm */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">Lọc nhóm:</span>
-        <select
-          className="input max-w-xs"
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-        >
+        <select className="input max-w-xs" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
           <option value="all">Tất cả nhóm</option>
           {LEAD_ROLES.map((r) => (
             <option key={r} value={r}>
@@ -211,7 +209,7 @@ export default function CostManager() {
         </select>
       </div>
 
-      {/* Bảng dữ liệu */}
+      {/* Bảng dữ liệu (tóm tắt) */}
       <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
         <table className="w-full text-sm">
           <thead>
@@ -219,23 +217,24 @@ export default function CostManager() {
               <th className="px-4 py-3">STT</th>
               <th className="px-4 py-3">Ngày nhập</th>
               <th className="px-4 py-3">Nhóm</th>
+              <th className="px-4 py-3 text-right">Doanh thu</th>
               <th className="px-4 py-3 text-right">Tổng chi phí</th>
-              <th className="px-4 py-3 text-right">Chi phí thuê group</th>
               <th className="px-4 py-3 text-right">Ngân sách</th>
+              <th className="px-4 py-3 text-right">Tổng SĐT</th>
               <th className="px-4 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-400">
+                <td colSpan={8} className="py-10 text-center text-gray-400">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin" />
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-400">
-                  Chưa có dữ liệu chi phí.
+                <td colSpan={8} className="py-10 text-center text-gray-400">
+                  Chưa có dữ liệu.
                 </td>
               </tr>
             ) : (
@@ -245,12 +244,13 @@ export default function CostManager() {
                   <td className="px-4 py-3 font-medium text-gray-800">{formatDateVN(c.date)}</td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
-                      {LEAD_ROLE_LABELS[c.leadRole as keyof typeof LEAD_ROLE_LABELS] ?? c.leadRole}
+                      {roleLabel(c.leadRole)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(c.totalCost)}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(c.groupCost)}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(c.budget)}</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.revenue) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.totalCost) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(Number(c.budget) || 0)}</td>
+                  <td className="px-4 py-3 text-right">{Number(c.totalPhone) || 0}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
@@ -318,7 +318,7 @@ function DeleteCostModal({
   return (
     <Modal
       open={!!item}
-      title="Xóa chi phí"
+      title="Xóa số liệu"
       onClose={onClose}
       size="sm"
       footer={
@@ -341,13 +341,10 @@ function DeleteCostModal({
       }
     >
       <p className="text-sm text-gray-600">
-        Xóa chi phí ngày{' '}
-        <span className="font-semibold text-gray-900">{item ? formatDateVN(item.date) : ''}</span>{' '}
-        (nhóm{' '}
-        <span className="font-semibold text-gray-900">
-          {item ? LEAD_ROLE_LABELS[item.leadRole as keyof typeof LEAD_ROLE_LABELS] ?? item.leadRole : ''}
-        </span>
-        )? Hành động này không thể hoàn tác.
+        Xóa số liệu ngày{' '}
+        <span className="font-semibold text-gray-900">{item ? formatDateVN(item.date) : ''}</span> (nhóm{' '}
+        <span className="font-semibold text-gray-900">{item ? roleLabel(item.leadRole) : ''}</span>)? Hành
+        động này không thể hoàn tác.
       </p>
     </Modal>
   )
