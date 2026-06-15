@@ -1,5 +1,5 @@
-import ComingSoon from '@/components/ComingSoon'
+import LeadReport from '@/components/LeadReport'
 
 export default function LeadAdsPage() {
-  return <ComingSoon title="Lead ADS" />
+  return <LeadReport role="ads" title="Lead ADS" />
 }

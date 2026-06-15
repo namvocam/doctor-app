@@ -1,5 +1,5 @@
-import ComingSoon from '@/components/ComingSoon'
+import LeadReport from '@/components/LeadReport'
 
 export default function LeadPhauAllPage() {
-  return <ComingSoon title="Báo cáo LEAD phẫu - Tất cả" />
+  return <LeadReport role="all" title="Báo cáo LEAD phẫu - Tất cả" />
 }
