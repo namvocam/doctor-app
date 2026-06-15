@@ -209,8 +209,6 @@ export default function LeadReport({ role, title }: { role: string; title: strin
     fetchData(cleared)
   }
 
-  const colCount = visibleColumns.length + 2 // STT + Ngày nhập
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -274,102 +272,107 @@ export default function LeadReport({ role, title }: { role: string; title: strin
             : 'space-y-4'
         }
       >
-        {/* Thống kê nhanh */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-brand">
-            <BarChart3 className="h-4 w-4" /> Thống kê nhanh
-          </h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <Stat label="Doanh thu" value={money(g(totals, 'revenue'))} valueClass="text-gray-900" />
-            <Stat label="Tổng chi phí" value={money(totalCost(totals))} valueClass="text-red-600" />
-            <Stat label="Chi phí thuê group" value={money(g(totals, 'groupCost'))} valueClass="text-orange-600" />
-            <Stat label="Ngân sách" value={money(g(totals, 'budget'))} valueClass="text-amber-600" />
-            <Stat label="Tổng chi phí / doanh thu" value={pct(totalCost(totals), g(totals, 'revenue'))} valueClass="text-teal-600" />
-            <Stat label="Tỷ lệ chốt tổng" value={pct(depositAndService(totals), g(totals, 'totalPhone'))} valueClass="text-green-600" />
+        {loading ? (
+          <div className="rounded-xl bg-white p-16 text-center shadow-sm ring-1 ring-gray-100">
+            <Loader2 className="mx-auto h-7 w-7 animate-spin text-gray-300" />
           </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative" ref={colRef}>
-            <button
-              onClick={() => setShowCols((v) => !v)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <Columns3 className="h-4 w-4" /> Ẩn/Hiện cột <ChevronDown className="h-3.5 w-3.5" />
-            </button>
-            {showCols && (
-              <div className="absolute left-0 top-11 z-50 w-72 rounded-xl border border-gray-100 bg-white p-3 shadow-lg">
-                <div className="mb-2 flex gap-2">
-                  <button
-                    onClick={() => setVisible(defaultVisible())}
-                    className="flex-1 rounded-lg bg-brand py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
-                  >
-                    Tất cả
-                  </button>
-                  <button
-                    onClick={() => setVisible(Object.fromEntries(COLUMNS.map((c) => [c.key, false])))}
-                    className="flex-1 rounded-lg border border-gray-300 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                  >
-                    Bỏ hết
-                  </button>
-                </div>
-                <div className="max-h-72 space-y-0.5 overflow-y-auto scrollbar-thin pr-1">
-                  {COLUMNS.map((c) => (
-                    <label
-                      key={c.key}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!visible[c.key]}
-                        onChange={() => setVisible((prev) => ({ ...prev, [c.key]: !prev[c.key] }))}
-                        className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
-                      />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl bg-white px-6 py-20 text-center shadow-sm ring-1 ring-gray-100">
+            <Search className="h-9 w-9 text-gray-700" />
+            <p className="mt-4 text-base font-semibold text-gray-800">Không có dữ liệu</p>
+            <p className="mt-1 text-sm text-gray-500">
+              Vui lòng điều chỉnh bộ lọc để tìm kiếm báo cáo phù hợp.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Thống kê nhanh */}
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-brand">
+                <BarChart3 className="h-4 w-4" /> Thống kê nhanh
+              </h2>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+                <Stat label="Doanh thu" value={money(g(totals, 'revenue'))} valueClass="text-gray-900" />
+                <Stat label="Tổng chi phí" value={money(totalCost(totals))} valueClass="text-red-600" />
+                <Stat label="Ngân sách" value={money(g(totals, 'budget'))} valueClass="text-amber-600" />
+                <Stat label="Tổng chi phí / doanh thu" value={pct(totalCost(totals), g(totals, 'revenue'))} valueClass="text-teal-600" />
+                <Stat label="Tỷ lệ chốt tổng" value={pct(depositAndService(totals), g(totals, 'totalPhone'))} valueClass="text-green-600" />
               </div>
-            )}
-          </div>
+            </div>
 
-          <button
-            onClick={() => setFullscreen((v) => !v)}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            {fullscreen ? 'Thoát' : 'Fullscreen'}
-          </button>
-        </div>
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative" ref={colRef}>
+                <button
+                  onClick={() => setShowCols((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Columns3 className="h-4 w-4" /> Ẩn/Hiện cột <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                {showCols && (
+                  <div className="absolute left-0 top-11 z-50 w-72 rounded-xl border border-gray-100 bg-white p-3 shadow-lg">
+                    <div className="mb-2 flex gap-2">
+                      <button
+                        onClick={() => setVisible(defaultVisible())}
+                        className="flex-1 rounded-lg bg-brand py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+                      >
+                        Tất cả
+                      </button>
+                      <button
+                        onClick={() => setVisible(Object.fromEntries(COLUMNS.map((c) => [c.key, false])))}
+                        className="flex-1 rounded-lg border border-gray-300 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                      >
+                        Bỏ hết
+                      </button>
+                    </div>
+                    <div className="max-h-72 space-y-0.5 overflow-y-auto scrollbar-thin pr-1">
+                      {COLUMNS.map((c) => (
+                        <label
+                          key={c.key}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!visible[c.key]}
+                            onChange={() => setVisible((prev) => ({ ...prev, [c.key]: !prev[c.key] }))}
+                            className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                          />
+                          {c.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-        {/* Table */}
-        <div
-          className={`overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin ${
-            fullscreen ? 'flex-1' : ''
-          }`}
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
-                <th className="sticky left-0 z-30 w-16 bg-brand-navy px-3 py-3">STT</th>
-                <th className="sticky left-16 z-30 min-w-[112px] whitespace-nowrap border-r border-white/15 bg-brand-navy px-3 py-3">
-                  Ngày nhập
-                </th>
-                {visibleColumns.map((c) => (
-                  <Th key={c.key}>{c.label}</Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={colCount} className="py-12 text-center text-gray-400">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                  </td>
-                </tr>
-              ) : (
-                <>
+              <button
+                onClick={() => setFullscreen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {fullscreen ? 'Thoát' : 'Fullscreen'}
+              </button>
+            </div>
+
+            {/* Table */}
+            <div
+              className={`overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-100 scrollbar-thin ${
+                fullscreen ? 'flex-1' : ''
+              }`}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
+                    <th className="sticky left-0 z-30 w-16 bg-brand-navy px-3 py-3">STT</th>
+                    <th className="sticky left-16 z-30 min-w-[112px] whitespace-nowrap border-r border-white/15 bg-brand-navy px-3 py-3">
+                      Ngày nhập
+                    </th>
+                    {visibleColumns.map((c) => (
+                      <Th key={c.key}>{c.label}</Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {/* Dòng TỔNG */}
                   <tr className="border-b border-gray-200 bg-gray-50 font-semibold text-gray-800">
                     <td className="sticky left-0 z-20 w-16 bg-gray-50 px-3 py-3 text-center">TỔNG</td>
@@ -380,34 +383,26 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                       </Td>
                     ))}
                   </tr>
-                  {rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={colCount} className="py-10 text-center text-gray-400">
-                        Không có dữ liệu.
+                  {rows.map((r, i) => (
+                    <tr key={r.date} className="group border-b border-gray-100 hover:bg-gray-50">
+                      <td className="sticky left-0 z-20 w-16 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
+                        {i + 1}
                       </td>
+                      <td className="sticky left-16 z-20 min-w-[112px] whitespace-nowrap border-r border-gray-200 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
+                        {r.date}
+                      </td>
+                      {visibleColumns.map((c) => (
+                        <Td key={c.key} className="text-center">
+                          {c.value(r)}
+                        </Td>
+                      ))}
                     </tr>
-                  ) : (
-                    rows.map((r, i) => (
-                      <tr key={r.date} className="group border-b border-gray-100 hover:bg-gray-50">
-                        <td className="sticky left-0 z-20 w-16 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
-                          {i + 1}
-                        </td>
-                        <td className="sticky left-16 z-20 min-w-[112px] whitespace-nowrap border-r border-gray-200 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
-                          {r.date}
-                        </td>
-                        {visibleColumns.map((c) => (
-                          <Td key={c.key} className="text-center">
-                            {c.value(r)}
-                          </Td>
-                        ))}
-                      </tr>
-                    ))
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
