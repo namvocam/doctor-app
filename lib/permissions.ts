@@ -8,6 +8,7 @@ export const ROLES = [
   'tele-sale',
   'sale',
   'nurse',
+  'ke-toan',
 ] as const
 
 export type Role = (typeof ROLES)[number]
@@ -20,6 +21,7 @@ export const ROLE_LABELS: Record<string, string> = {
   'tele-sale': 'Tele-sale',
   sale: 'Sale',
   nurse: 'Y tá',
+  'ke-toan': 'Kế toán',
 }
 
 /** Các role admin được phép tạo (không gồm admin). */
@@ -30,6 +32,7 @@ export const ASSIGNABLE_ROLES: Role[] = [
   'tele-sale',
   'sale',
   'nurse',
+  'ke-toan',
 ]
 
 /* ---------------- Quyền với Lịch hẹn ---------------- */
@@ -72,6 +75,12 @@ export function canCreateReExam(role?: string) {
 /** Sửa/Xoá tái khám: admin (tất cả), y tá (bản ghi của mình). */
 export function canEditReExam(role?: string, isOwner = false) {
   return role === 'admin' || (role === 'nurse' && isOwner)
+}
+
+/* ---------------- Quyền với Chi phí (kế toán) ---------------- */
+/** Nhập/sửa/xóa chi phí theo ngày: admin và kế toán. */
+export function canManageCosts(role?: string) {
+  return role === 'admin' || role === 'ke-toan'
 }
 
 /* ---------------- Menu báo cáo ---------------- */

@@ -2,8 +2,22 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { connectToDatabase } from '@/lib/mongodb'
 import AppointmentModel from '@/models/Appointment'
 import SourceRoleModel from '@/models/SourceRole'
+import DailyCostModel from '@/models/DailyCost'
 import { getCurrentUser } from '@/lib/session'
 import { LEAD_ROLES, REVENUE_RESULT, type LeadRole } from '@/lib/leadReport'
+
+interface ReportRow {
+  date: string
+  revenue: number
+  count: number
+  totalCost: number
+  groupCost: number
+  budget: number
+}
+
+function emptyTotals() {
+  return { revenue: 0, totalCost: 0, groupCost: 0, budget: 0 }
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -21,55 +35,98 @@ export async function GET(request: NextRequest) {
     const roles: string[] =
       roleParam === 'all' ? [...LEAD_ROLES] : LEAD_ROLES.includes(roleParam as LeadRole) ? [roleParam] : []
 
-    // Các nguồn thuộc (các) role yêu cầu
-    const mappings = await SourceRoleModel.find({ role: { $in: roles } }).lean()
-    const sources = mappings.map((m) => m.source)
-
-    // Nếu không có nguồn nào gắn role -> báo cáo rỗng
-    if (sources.length === 0) {
-      return NextResponse.json({ rows: [], total: 0 })
+    if (roles.length === 0) {
+      return NextResponse.json({ rows: [], total: 0, totals: emptyTotals() })
     }
 
-    const match: Record<string, unknown> = {
-      result: REVENUE_RESULT,
-      source: { $in: sources },
-      dataReceivedAt: { $ne: null },
-    }
-
+    // Khoảng ngày (dùng chung cho doanh thu & chi phí)
     const from = sp.get('from')
     const to = sp.get('to')
+    let dateRange: Record<string, Date> | null = null
     if (from || to) {
-      const range: Record<string, Date> = {}
-      if (from) range.$gte = new Date(from)
+      dateRange = {}
+      if (from) dateRange.$gte = new Date(from)
       if (to) {
         const end = new Date(to)
         end.setHours(23, 59, 59, 999)
-        range.$lte = end
+        dateRange.$lte = end
       }
-      match.dataReceivedAt = range
     }
 
-    const grouped = await AppointmentModel.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%d/%m/%Y', date: '$dataReceivedAt', timezone: TZ } },
-          revenue: { $sum: '$revenue' },
-          count: { $sum: 1 },
-          sortKey: { $min: '$dataReceivedAt' },
+    // Gom theo dateKey ('dd/mm/yyyy'): doanh thu + chi phí
+    const byDate = new Map<string, ReportRow & { sortDate: Date }>()
+    const ensure = (key: string, sort: Date) => {
+      let r = byDate.get(key)
+      if (!r) {
+        r = { date: key, revenue: 0, count: 0, totalCost: 0, groupCost: 0, budget: 0, sortDate: sort }
+        byDate.set(key, r)
+      } else if (sort < r.sortDate) {
+        r.sortDate = sort
+      }
+      return r
+    }
+
+    // --- Doanh thu: từ lịch hẹn đã phẫu thuật của các nguồn thuộc role ---
+    const mappings = await SourceRoleModel.find({ role: { $in: roles } }).lean()
+    const sources = mappings.map((m) => m.source)
+    if (sources.length > 0) {
+      const match: Record<string, unknown> = {
+        result: REVENUE_RESULT,
+        source: { $in: sources },
+        dataReceivedAt: dateRange ?? { $ne: null },
+      }
+      const grouped = await AppointmentModel.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%d/%m/%Y', date: '$dataReceivedAt', timezone: TZ } },
+            revenue: { $sum: '$revenue' },
+            count: { $sum: 1 },
+            sortKey: { $min: '$dataReceivedAt' },
+          },
         },
-      },
-      { $sort: { sortKey: 1 } },
-    ])
+      ])
+      for (const g of grouped) {
+        const r = ensure(g._id as string, g.sortKey as Date)
+        r.revenue += (g.revenue as number) ?? 0
+        r.count += (g.count as number) ?? 0
+      }
+    }
 
-    const rows = grouped.map((g) => ({
-      date: g._id as string,
-      revenue: g.revenue as number,
-      count: g.count as number,
-    }))
-    const total = rows.reduce((s, r) => s + r.revenue, 0)
+    // --- Chi phí: do kế toán nhập, gộp các nhóm khi role='all' ---
+    const costQuery: Record<string, unknown> = { leadRole: { $in: roles } }
+    if (dateRange) costQuery.date = dateRange
+    const costs = await DailyCostModel.find(costQuery).lean()
+    for (const c of costs) {
+      const r = ensure(c.dateKey as string, c.date as Date)
+      r.totalCost += (c.totalCost as number) ?? 0
+      r.groupCost += (c.groupCost as number) ?? 0
+      r.budget += (c.budget as number) ?? 0
+    }
 
-    return NextResponse.json({ rows, total })
+    const rows: ReportRow[] = [...byDate.values()]
+      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+      .map((r) => ({
+        date: r.date,
+        revenue: r.revenue,
+        count: r.count,
+        totalCost: r.totalCost,
+        groupCost: r.groupCost,
+        budget: r.budget,
+      }))
+
+    const totals = rows.reduce(
+      (s, r) => ({
+        revenue: s.revenue + r.revenue,
+        totalCost: s.totalCost + r.totalCost,
+        groupCost: s.groupCost + r.groupCost,
+        budget: s.budget + r.budget,
+      }),
+      emptyTotals()
+    )
+
+    // `total` (số) giữ lại để tương thích phần thống kê cũ.
+    return NextResponse.json({ rows, total: totals.revenue, totals })
   } catch (error) {
     console.error('GET /api/lead-report error:', error)
     return NextResponse.json({ error: 'Không thể tải báo cáo' }, { status: 500 })

@@ -17,9 +17,10 @@ import {
   List,
   Video,
   Megaphone,
+  Wallet,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
-import { visibleLeadReports } from '@/lib/permissions'
+import { visibleLeadReports, canManageCosts } from '@/lib/permissions'
 
 interface NavChild {
   label: string
@@ -187,6 +188,14 @@ export default function Sidebar({
             { label: 'Tất cả tái khám', href: '/reexam', icon: CalendarClock },
           ]}
         />
+        {canManageCosts(role) && (
+          <NavLink
+            href="/costs"
+            label="Nhập chi phí"
+            icon={Wallet}
+            onNavigate={onNavigate}
+          />
+        )}
 
         {role === 'admin' && (
           <>
