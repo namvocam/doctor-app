@@ -137,16 +137,35 @@ const COL_DEFS: { key: string; label: string }[] = [
   { key: 'hardReachRate', label: 'Tỉ lệ data khó tiếp cận (%)' },
 ]
 
+/** Cột tiền (căn phải). Các cột số & % căn giữa. */
+const MONEY_COLS: ReadonlySet<string> = new Set([
+  'revenue',
+  'totalCost',
+  'groupCost',
+  'budget',
+  'roomCostND',
+  'avgInvoicePerServiceCustomer',
+  'costPerMess',
+  'costPerPhone',
+  'costPerBookTN',
+  'costPerBookCumulative',
+  'mktCostPerCustomerToSite',
+  'mktCostPerCustomerService',
+  'invoicePerVisit',
+])
+
 interface ReportColumn {
   key: string
   label: string
   value: (m: M) => React.ReactNode
+  align: string
 }
 
 const COLUMNS: ReportColumn[] = COL_DEFS.map((c) => ({
   key: c.key,
   label: c.label,
   value: VALUE[c.key] ?? (() => '-'),
+  align: MONEY_COLS.has(c.key) ? 'text-right' : 'text-center',
 }))
 
 function defaultVisible(): Record<string, boolean> {
@@ -363,8 +382,8 @@ export default function LeadReport({ role, title }: { role: string; title: strin
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
-                    <th className="sticky left-0 z-30 w-16 bg-brand-navy px-3 py-3">STT</th>
-                    <th className="sticky left-16 z-30 min-w-[112px] whitespace-nowrap border-r border-white/15 bg-brand-navy px-3 py-3">
+                    <th className="sticky left-0 z-30 h-28 w-16 bg-brand-navy px-3 align-middle">STT</th>
+                    <th className="sticky left-16 z-30 h-28 min-w-[112px] whitespace-nowrap border-r border-white/15 bg-brand-navy px-3 align-middle">
                       Ngày nhập
                     </th>
                     {visibleColumns.map((c) => (
@@ -378,7 +397,7 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                     <td className="sticky left-0 z-20 w-16 bg-gray-50 px-3 py-3 text-center">TỔNG</td>
                     <td className="sticky left-16 z-20 min-w-[112px] border-r border-gray-200 bg-gray-50 px-3 py-3" />
                     {visibleColumns.map((c) => (
-                      <Td key={c.key} className="text-center">
+                      <Td key={c.key} className={c.align}>
                         {c.value(totals)}
                       </Td>
                     ))}
@@ -392,7 +411,7 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                         {r.date}
                       </td>
                       {visibleColumns.map((c) => (
-                        <Td key={c.key} className="text-center">
+                        <Td key={c.key} className={c.align}>
                           {c.value(r)}
                         </Td>
                       ))}
@@ -417,7 +436,7 @@ function Stat({ label, value, valueClass }: { label: string; value: string; valu
   )
 }
 function Th({ children }: { children?: React.ReactNode }) {
-  return <th className="whitespace-nowrap px-3 py-3">{children}</th>
+  return <th className="h-28 min-w-[90px] whitespace-normal px-3 align-middle">{children}</th>
 }
 function Td({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
   return <td className={`px-3 py-3 ${className}`}>{children}</td>
