@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Wallet, Save, Loader2, Check, Trash2, Pencil, RotateCcw } from 'lucide-react'
+import { Wallet, Plus, Save, Loader2, Check, Trash2, Pencil } from 'lucide-react'
 import Modal from '@/components/Modal'
 import {
   LEAD_ROLES,
@@ -42,12 +42,8 @@ export default function CostManager() {
   const [items, setItems] = useState<CostItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState<string>('all')
-  const [leadRole, setLeadRole] = useState<string>(LEAD_ROLES[0])
-  const [date, setDate] = useState('')
-  const [values, setValues] = useState<Values>(emptyValues)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [formItem, setFormItem] = useState<CostItem | null>(null)
   const [deleteItem, setDeleteItem] = useState<CostItem | null>(null)
 
   const load = useCallback(async (role: string) => {
@@ -66,140 +62,27 @@ export default function CostManager() {
     load(filterRole)
   }, [load, filterRole])
 
-  function resetForm() {
-    setLeadRole(LEAD_ROLES[0])
-    setDate('')
-    setValues(emptyValues())
-    setEditingId(null)
-    setError('')
+  function openCreate() {
+    setFormItem(null)
+    setFormOpen(true)
   }
-
-  function editFrom(item: CostItem) {
-    setLeadRole(item.leadRole)
-    setDate(dateKeyToYmd(item.dateKey))
-    const v: Values = {}
-    for (const k of COST_INPUT_FIELDS) v[k] = String(item[k] ?? 0)
-    setValues(v)
-    setEditingId(item._id)
-    setError('')
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const setVal = (k: string, v: string) => setValues((prev) => ({ ...prev, [k]: v }))
-
-  async function save() {
-    if (!date) {
-      setError('Vui lòng chọn ngày nhập')
-      return
-    }
-    setSaving(true)
-    setError('')
-    try {
-      const body: Record<string, unknown> = { leadRole, date }
-      for (const k of COST_INPUT_FIELDS) body[k] = Number(values[k]) || 0
-      const res = await fetch('/api/daily-costs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) {
-        const j = await res.json()
-        setError(j.error ?? 'Lưu thất bại')
-        return
-      }
-      resetForm()
-      await load(filterRole)
-    } catch {
-      setError('Không thể kết nối máy chủ')
-    } finally {
-      setSaving(false)
-    }
+  function openEdit(item: CostItem) {
+    setFormItem(item)
+    setFormOpen(true)
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-gray-800">
-        <Wallet className="h-6 w-6 text-brand" /> Nhập số liệu theo ngày
-      </h1>
-
-      {/* Form nhập */}
-      <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-brand">
-          {editingId ? 'Cập nhật số liệu' : 'Thêm số liệu'}
-        </h2>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Nhóm">
-            <select className="input" value={leadRole} onChange={(e) => setLeadRole(e.target.value)}>
-              {LEAD_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {LEAD_ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Ngày nhập">
-            <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-        </div>
-
-        <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
-          Doanh thu &amp; chi phí (₫)
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {COST_MONEY_FIELDS.map((k) => (
-            <Field key={k} label={COST_FIELD_LABELS[k]}>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="input"
-                value={formatThousand(values[k])}
-                onChange={(e) => setVal(k, e.target.value.replace(/\D/g, ''))}
-              />
-            </Field>
-          ))}
-        </div>
-
-        <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
-          Số đếm vận hành
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {COST_COUNT_FIELDS.map((k) => (
-            <Field key={k} label={COST_FIELD_LABELS[k]}>
-              <input
-                type="number"
-                min={0}
-                className="input"
-                value={values[k]}
-                onChange={(e) => setVal(k, e.target.value)}
-              />
-            </Field>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-end gap-2">
-          {error && <span className="mr-auto text-sm text-red-600">{error}</span>}
-          {editingId && (
-            <button
-              onClick={resetForm}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
-              <RotateCcw className="h-4 w-4" /> Hủy sửa
-            </button>
-          )}
-          <button
-            onClick={save}
-            disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {editingId ? 'Cập nhật' : 'Lưu'}
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-gray-400">
-          Mỗi nhóm chỉ có 1 bản ghi cho mỗi ngày — nhập lại cùng nhóm &amp; ngày sẽ ghi đè. &quot;Khách
-          fail tại cơ sở&quot; và &quot;Ca fail bác sĩ từ chối&quot; tự suy từ Lịch hẹn, không nhập ở đây.
-        </p>
+      <div className="flex items-center justify-between">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-gray-800">
+          <Wallet className="h-6 w-6 text-brand" /> Nhập số liệu theo ngày
+        </h1>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+        >
+          <Plus className="h-4 w-4" /> Nhập liệu
+        </button>
       </div>
 
       {/* Bộ lọc nhóm */}
@@ -260,7 +143,7 @@ export default function CostManager() {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => editFrom(c)}
+                        onClick={() => openEdit(c)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Sửa
@@ -280,12 +163,163 @@ export default function CostManager() {
         </table>
       </div>
 
-      <DeleteCostModal
-        item={deleteItem}
-        onClose={() => setDeleteItem(null)}
-        onDeleted={() => load(filterRole)}
+      <CostFormModal
+        open={formOpen}
+        item={formItem}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => load(filterRole)}
       />
+      <DeleteCostModal item={deleteItem} onClose={() => setDeleteItem(null)} onDeleted={() => load(filterRole)} />
     </div>
+  )
+}
+
+function CostFormModal({
+  open,
+  item,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  item: CostItem | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [leadRole, setLeadRole] = useState<string>(LEAD_ROLES[0])
+  const [date, setDate] = useState('')
+  const [values, setValues] = useState<Values>(emptyValues)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [initKey, setInitKey] = useState<string | null>(null)
+
+  // Khởi tạo form khi mở (thêm mới hoặc sửa) — theo pattern set-state-in-render.
+  const key = open ? item?._id ?? 'new' : null
+  if (key !== null && key !== initKey) {
+    setInitKey(key)
+    setError('')
+    if (item) {
+      setLeadRole(item.leadRole)
+      setDate(dateKeyToYmd(item.dateKey))
+      const v: Values = {}
+      for (const k of COST_INPUT_FIELDS) v[k] = String(item[k] ?? 0)
+      setValues(v)
+    } else {
+      setLeadRole(LEAD_ROLES[0])
+      setDate('')
+      setValues(emptyValues())
+    }
+  }
+  if (key === null && initKey !== null) setInitKey(null)
+
+  const setVal = (k: string, v: string) => setValues((prev) => ({ ...prev, [k]: v }))
+
+  async function save() {
+    if (!date) {
+      setError('Vui lòng chọn ngày nhập')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const body: Record<string, unknown> = { leadRole, date }
+      for (const k of COST_INPUT_FIELDS) body[k] = Number(values[k]) || 0
+      const res = await fetch('/api/daily-costs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const j = await res.json()
+        setError(j.error ?? 'Lưu thất bại')
+        return
+      }
+      onSaved()
+      onClose()
+    } catch {
+      setError('Không thể kết nối máy chủ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title={item ? 'Cập nhật số liệu' : 'Nhập số liệu'}
+      onClose={onClose}
+      size="lg"
+      footer={
+        <>
+          {error && <span className="mr-auto self-center text-sm text-red-600">{error}</span>}
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Huỷ
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {item ? 'Cập nhật' : 'Lưu'}
+          </button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Nhóm">
+          <select className="input" value={leadRole} onChange={(e) => setLeadRole(e.target.value)}>
+            {LEAD_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {LEAD_ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Ngày nhập">
+          <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+        </Field>
+      </div>
+
+      <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
+        Doanh thu &amp; chi phí (₫)
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {COST_MONEY_FIELDS.map((k) => (
+          <Field key={k} label={COST_FIELD_LABELS[k]}>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="input"
+              value={formatThousand(values[k])}
+              onChange={(e) => setVal(k, e.target.value.replace(/\D/g, ''))}
+            />
+          </Field>
+        ))}
+      </div>
+
+      <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">Số đếm vận hành</p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {COST_COUNT_FIELDS.map((k) => (
+          <Field key={k} label={COST_FIELD_LABELS[k]}>
+            <input
+              type="number"
+              min={0}
+              className="input"
+              value={values[k]}
+              onChange={(e) => setVal(k, e.target.value)}
+            />
+          </Field>
+        ))}
+      </div>
+
+      <p className="mt-4 text-xs text-gray-400">
+        Mỗi nhóm chỉ có 1 bản ghi cho mỗi ngày — nhập lại cùng nhóm &amp; ngày sẽ ghi đè. &quot;Khách fail
+        tại cơ sở&quot; và &quot;Ca fail bác sĩ từ chối&quot; tự suy từ Lịch hẹn, không nhập ở đây.
+      </p>
+    </Modal>
   )
 }
 
