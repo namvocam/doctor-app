@@ -350,8 +350,10 @@ export default function LeadReport({ role, title }: { role: string; title: strin
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-brand-navy text-center text-xs font-semibold uppercase text-white">
-                <Th>STT</Th>
-                <Th>Ngày nhập</Th>
+                <th className="sticky left-0 z-30 w-16 bg-brand-navy px-3 py-3">STT</th>
+                <th className="sticky left-16 z-30 min-w-[112px] whitespace-nowrap border-r border-white/15 bg-brand-navy px-3 py-3">
+                  Ngày nhập
+                </th>
                 {visibleColumns.map((c) => (
                   <Th key={c.key}>{c.label}</Th>
                 ))}
@@ -368,8 +370,8 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                 <>
                   {/* Dòng TỔNG */}
                   <tr className="border-b border-gray-200 bg-gray-50 font-semibold text-gray-800">
-                    <Td className="text-center">TỔNG</Td>
-                    <Td />
+                    <td className="sticky left-0 z-20 w-16 bg-gray-50 px-3 py-3 text-center">TỔNG</td>
+                    <td className="sticky left-16 z-20 min-w-[112px] border-r border-gray-200 bg-gray-50 px-3 py-3" />
                     {visibleColumns.map((c) => (
                       <Td key={c.key} className="text-center">
                         {c.value(totals)}
@@ -384,9 +386,13 @@ export default function LeadReport({ role, title }: { role: string; title: strin
                     </tr>
                   ) : (
                     rows.map((r, i) => (
-                      <tr key={r.date} className="border-b border-gray-100 hover:bg-gray-50">
-                        <Td className="text-center">{i + 1}</Td>
-                        <Td className="whitespace-nowrap text-center">{r.date}</Td>
+                      <tr key={r.date} className="group border-b border-gray-100 hover:bg-gray-50">
+                        <td className="sticky left-0 z-20 w-16 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
+                          {i + 1}
+                        </td>
+                        <td className="sticky left-16 z-20 min-w-[112px] whitespace-nowrap border-r border-gray-200 bg-white px-3 py-3 text-center group-hover:bg-gray-50">
+                          {r.date}
+                        </td>
                         {visibleColumns.map((c) => (
                           <Td key={c.key} className="text-center">
                             {c.value(r)}
