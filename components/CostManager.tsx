@@ -30,6 +30,12 @@ const emptyValues = (): Values => {
   return o
 }
 
+/** Hiển thị số thô '32000' -> '32.000' (dấu chấm phân cách nghìn). */
+const formatThousand = (raw: string) => {
+  const digits = raw.replace(/\D/g, '')
+  return digits ? Number(digits).toLocaleString('vi-VN') : ''
+}
+
 const roleLabel = (r: string) => LEAD_ROLE_LABELS[r as keyof typeof LEAD_ROLE_LABELS] ?? r
 
 export default function CostManager() {
@@ -144,11 +150,11 @@ export default function CostManager() {
           {COST_MONEY_FIELDS.map((k) => (
             <Field key={k} label={COST_FIELD_LABELS[k]}>
               <input
-                type="number"
-                min={0}
+                type="text"
+                inputMode="numeric"
                 className="input"
-                value={values[k]}
-                onChange={(e) => setVal(k, e.target.value)}
+                value={formatThousand(values[k])}
+                onChange={(e) => setVal(k, e.target.value.replace(/\D/g, ''))}
               />
             </Field>
           ))}
