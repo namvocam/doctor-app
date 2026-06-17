@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT } from 'jose'
 import { SESSION_SECRET } from '@/lib/config'
 
 export const SESSION_COOKIE = 'ta_session'
@@ -24,24 +24,26 @@ export async function signSession(payload: SessionPayload): Promise<string> {
 }
 
 export async function verifySession(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   token: string | undefined
 ): Promise<SessionPayload | null> {
   // Tạm khóa truy cập: vô hiệu hóa mọi phiên đăng nhập hiện có.
-  // Bỏ dòng return dưới đây để khôi phục xác thực bình thường.
+  // Để khôi phục: trả lại thân hàm đã comment bên dưới (xóa dòng return null
+  // và bỏ comment khối logic gốc).
   return null
 
-  if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, getSecret())
-    return {
-      userId: String(payload.userId),
-      username: String(payload.username),
-      name: String(payload.name),
-      role: String(payload.role),
-    }
-  } catch {
-    return null
-  }
+  // if (!token) return null
+  // try {
+  //   const { payload } = await jwtVerify(token, getSecret())
+  //   return {
+  //     userId: String(payload.userId),
+  //     username: String(payload.username),
+  //     name: String(payload.name),
+  //     role: String(payload.role),
+  //   }
+  // } catch {
+  //   return null
+  // }
 }
 
 export const SESSION_MAX_AGE = MAX_AGE_SECONDS
