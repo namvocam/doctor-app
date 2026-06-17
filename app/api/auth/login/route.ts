@@ -7,6 +7,13 @@ import { signSession, SESSION_COOKIE, SESSION_MAX_AGE } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  // Tạm khóa đăng nhập: chặn mọi tài khoản login vào app.
+  // Bỏ đoạn return dưới đây để mở lại đăng nhập.
+  return NextResponse.json(
+    { error: 'Hệ thống đang bảo trì. Tạm thời không thể đăng nhập.' },
+    { status: 503 }
+  )
+
   try {
     const { username, password } = await request.json()
 

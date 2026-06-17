@@ -26,6 +26,10 @@ export async function signSession(payload: SessionPayload): Promise<string> {
 export async function verifySession(
   token: string | undefined
 ): Promise<SessionPayload | null> {
+  // Tạm khóa truy cập: vô hiệu hóa mọi phiên đăng nhập hiện có.
+  // Bỏ dòng return dưới đây để khôi phục xác thực bình thường.
+  return null
+
   if (!token) return null
   try {
     const { payload } = await jwtVerify(token, getSecret())
